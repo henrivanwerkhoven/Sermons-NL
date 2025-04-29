@@ -27,13 +27,12 @@ var sermonsnl = {
 			d[i].onclick = function(e){ e.stopPropagation(); };
 		}
 	},
-	showmore : function(direction){
+	showmore : function(direction, datefmt){
 		// get attributes
 		var data = {
 			action : "sermonsnl_showmore", 
 			direction: direction,
-			count : sermonsnl.count,
-			datefmt : sermonsnl.datefmt
+			datefmt : datefmt
 		};
 		x = document.getElementById("sermonsnl_list");
 		if(direction=="up"){
@@ -110,7 +109,7 @@ var sermonsnl = {
 	},
 	checkstatus_ids : [],
 	checkstatus : function(){
-		// add to data which sermons are currently live. server will return li element
+		// add to data which sermons are currently live. server will return data for these irrespective of whether they are still live
 		function _(s){
     		for(var i=0; i<s.length; i++){
     		    if(s[i].hasAttribute('id') && !sermonsnl.checkstatus_ids.includes(s[i].getAttribute("id"))){
@@ -123,7 +122,9 @@ var sermonsnl = {
 		
 		data = {
 		    action : 'sermonsnl_checkstatus',
-		    live : sermonsnl.checkstatus_ids
+		    live : sermonsnl.checkstatus_ids,
+			check_list : (sermonsnl.check_list ? 1 : 0),
+			check_lone : (sermonsnl.check_lone ? 1 : 0)
 		};
 		
 		jQuery.get(sermonsnl.admin_url, data, function(response){
@@ -131,26 +132,42 @@ var sermonsnl = {
 			    console.log("sermonsnl: unexpected response from sermonsnl.checkstatus()");
 			    return false;
 			}
-			if(response.count === 0) return false; // nothing was / is live
-			for(i=0; i<response.count; i++){
-			    li_obj = document.getElementById(response.events[i].id);
-			    if(li_obj){
-			        link_objs = li_obj.getElementsByClassName('sermonsnl-links');
-			        if(link_objs.length > 0){
-			            link_objs[0].innerHTML = response.events[i].html;
-			        }else{
-			            console.log('Missing obj with class sermonsnl-links');
-			        }
-			        span_objs = li_obj.getElementsByTagName('span');
-			        if(span_objs.length >= 2){
-			            span_objs[0].className = response.events[i].audio_class;
-			            span_objs[1].className = response.events[i].video_class;
-			        }else{
-			            console.log('Missing span tags');
-			        }
-			    }else{
-			        // tbd: obtain full li obj.
-			    }
+			if(response.events_list != null){
+				for(i=0; i<response.events_list.length; i++){
+					links_obj = document.getElementById(response.events_list[i].id);
+					if(links_obj){
+						links_obj.innerHTML = response.events_list[i].html;
+						li_obj = document.getElementById(response.events_list[i].id.replace('_links',''));
+						if(li_obj){
+							span_objs = li_obj.getElementsByTagName('span');
+							if(span_objs.length >= 2){
+								span_objs[0].className = response.events_list[i].audio_class;
+								span_objs[1].className = response.events_list[i].video_class;
+							}else{
+								console.log('Sermons-NL error: Missing span tags?');
+							}
+						}
+						else{
+							console.log('Sermons-NL error: Incorrect id for li element?');
+						}
+					}
+				}
+			}
+			if(response.events_lone != null){
+				for(i=0; i<response.events_lone.length; i++){
+					links_obj = document.getElementById(response.events_lone[i].id);
+					if(links_obj){
+						links_obj.innerHTML = response.events_lone[i].html;
+					}
+				}
+			}
+			if(response.items_lone != null){
+				for(i=0; i<response.items_lone.length; i++){
+					links_obj = document.getElementById(response.items_lone[i].id);
+					if(links_obj){
+						links_obj.innerHTML = response.items_lone[i].html;
+					}
+				}
 			}
 			return true;
 		}, 'json').fail(function(jqXHR, textStatus, errorThrown){
@@ -159,7 +176,7 @@ var sermonsnl = {
     	    
     	});
 	},
-	playmedia : function(elm, mimetype, service){
+	playmedia : function(elm, mimetype, service, standalone=false){
 		var isVideoLivestream = false;
 		var type = mimetype.split("/")[0];
 		if(type == 'application'){
@@ -171,17 +188,22 @@ var sermonsnl = {
 			return false; // open url
 		}
 		
-		// identify container where to add the audio element
-		x = elm;
-		do{
-			x = x.parentNode;
-		}while(x.parentNode.className != "sermonsnl-details");
+		if(standalone){
+			x = elm.parentNode.parentNode.parentNode;
+			li = null;
+		}else{
+			// identify container where to add the audio element
+			x = elm;
+			do{
+				x = x.parentNode;
+			}while(x.parentNode.className != "sermonsnl-details");
 
-		// identify the containing list item
-		li = x;
-		do{
-			li = li.parentNode;
-		}while(li.tagName.toLowerCase() != 'li');
+			// identify the containing list item
+			li = x;
+			do{
+				li = li.parentNode;
+			}while(li.tagName.toLowerCase() != 'li');
+		}
 
 		// check for already playing audio and video elements
 		var player_id = elm.getAttribute('id');
@@ -211,7 +233,9 @@ var sermonsnl = {
 				switch(this.players[this.playing].service){
 					case 'yt-video':
 						this.players[this.playing].player.pauseVideo();
-						this.players[this.playing].div.style.display = 'none';
+						// remove this player because the same video can be on the page twice and they can't both be created at the same time
+						this.players[this.playing].div.parentNode.removeChild(this.players[this.playing].div);
+						delete this.players[this.playing];
 					break;
 					case 'kg-video':
 						// check if live. If not, follow default behavior
@@ -264,14 +288,14 @@ var sermonsnl = {
 				this.players[this.playing] = {div: d, li: li, player: null, service: service};
 
 				if(!this.ytapi_loaded){
-					window.onYouTubePlayerAPIReady = function(){sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id);};
+					window.onYouTubePlayerAPIReady = function(){sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);};
 					// Load the IFrame Player API code asynchronously
 					var js = document.createElement('script');
 					js.src = "https://www.youtube.com/player_api";
 					document.head.appendChild(js);
 					this.ytapi_loaded = true;
 				}else{
-					sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id);
+					sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);
 				}
 			}else if(service == 'kg-video' && isVideoLivestream){
 				i = document.createElement('iframe');
@@ -334,10 +358,12 @@ var sermonsnl = {
 		if(type == 'video' && service != 'yt-video' && !(service == 'kg-video' && isVideoLivestream)){
 			m.addEventListener('canplay', function(){x.parentNode.style.height = x.clientHeight + 'px';});
 		}
-		x.parentNode.style.height = x.clientHeight + "px";
+		if(!standalone){
+			x.parentNode.style.height = x.clientHeight + "px";
+		}
 		return true;
 	},
-	createYTplayer : function(player_id,yt_videoid,x,container_id){
+	createYTplayer : function(player_id,yt_videoid,x,container_id,standalone){
 		// create the player
 		sermonsnl.players[player_id].player = new YT.Player(container_id, {
 			height: Math.round(x.clientWidth * 9/16),
@@ -345,35 +371,42 @@ var sermonsnl = {
 			videoId: yt_videoid,
 			playerVars: {autoplay : 1}
 		});
-		x.parentNode.style.height = x.clientHeight + "px";
+		if(!standalone){
+			x.parentNode.style.height = x.clientHeight + "px";
+		}
+	},
+	responsive_list : function(){
+		x = document.getElementById("sermonsnl_list");
+		if(x.clientWidth < 750) x.className = "style-narrow";
+		else x.className = "";
 	},
 	players : {},
 	playing : null,
 	vjs_loaded : false,
 	ytapi_loaded : false,
 	timer : null,
+	check_list : false,
+	check_lone : false,
 	onclick : null,
-	datefmt : 'long',
 	check_interval : Infinity,
 	admin_url : null
 }
 jQuery(document).ready(function($){
-	x = document.getElementById("sermonsnl_list");
-	if(x && sermonsnl.check_interval){
-		if(sermonsnl.check_interval != Infinity){
-			sermonsnl.timer = setInterval(sermonsnl.checkstatus, sermonsnl.check_interval*1000);
-		}
-		if(x.clientWidth < 750) x.className = "style-narrow";
-		else x.className = "";
-		// to prevent closure when clicking on child elements
+	x_list = document.getElementById("sermonsnl_list");
+	x_events = document.getElementsByClassName("sermonsnl_event_lone");
+	x_items = document.getElementsByClassName("sermonsnl_item_lone");
+
+	if((x_list != null || x_events.length > 0 || x_items.length > 0) && sermonsnl.check_interval > 0 && sermonsnl.check_interval != Infinity){
+		sermonsnl.check_list = (x_list != null);
+		sermonsnl.check_lone = (x_items.length > 0 || x_events.length > 0);
+		sermonsnl.timer = setInterval(sermonsnl.checkstatus, sermonsnl.check_interval*1000);
+	}
+	if(x_list != null){
+		// adjust width if needed
+		sermonsnl.responsive_list();
+		// this is to prevent closure of an item of the list when clicking on child elements
 		sermonsnl.stopPropagation();
 		// on resize check if narrow or normal style should be used
-		jQuery(window).resize(function($){
-			x = document.getElementById("sermonsnl_list");
-			if(x){
-				if(x.clientWidth < 750) x.className = "style-narrow";
-				else x.className = "";
-			}
-		});
+		jQuery(window).resize(sermonsnl.responsive_list);
 	}
 });

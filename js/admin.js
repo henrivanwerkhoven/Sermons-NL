@@ -60,6 +60,68 @@ var sermonsnl_admin = {
         }
     },
 
+    config_submit : function(form_obj){
+        // get attributes
+        var data = new FormData(form_obj);
+        var msg_obj = document.getElementById('sermonsnl_config_save_msg');
+        msg_obj.className = "";
+        msg_obj.innerText = "";
+        this.wait_a_sec(1);
+
+        jQuery.ajax({
+            type: "POST",
+            url: this.admin_url,
+            data: data,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response){
+                // scroll to top to show the notice
+                window.scrollTo(0,0);
+                if(!response || response.ok === null || !response.action){
+                    msg_obj.innerText = "Error: did not receive expected json response.";
+                    msg_obj.className = "notice notice-error";
+                    return false;
+                }
+                if(response.action != "sermonsnl_config_submit"){
+                    msg_obj.innerText = "Error: json action is not the same as requested.";
+                    msg_obj.className = "notice notice-error";
+                    return false;
+                }
+                if(response.ok === true){
+                    if(response.resources != ""){
+                        // obtain data in background. Don't worry about a response, if something goes wrong it will be logged.
+                        jQuery.ajax({
+                            type : "GET",
+                            url : sermonsnl_admin.admin_url,
+                            data : {
+                                action : 'sermonsnl_get_remote_data_in_background',
+                                resources : response.resources,
+                                _wpnonce : response.nonce
+                            },
+                            dataType : 'json'
+                        });
+                    }
+                    msg_obj.innerText = response.sucMsg;
+                    msg_obj.className = "notice notice-success keep5sec";
+                    return true;
+                }else{
+                    msg_obj.innerText = response.errMsg;
+                    msg_obj.className = "notice notice-error";
+                    return false;
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown){
+                msg_obj.innerText = textStatus + ": " + errorThrown;
+                msg_obj.className = "notice notice-error";
+            },
+            complete: function() {
+                sermonsnl_admin.wait_a_sec(0);
+            }
+        });
+        return true;
+    },
+
     show_details : function(eventid){
     	this.wait_a_sec(1);
         // get attributes
@@ -75,6 +137,9 @@ var sermonsnl_admin = {
     		obj = document.getElementById('sermonsnl_details_view');
     		obj.innerHTML = response.html;
     		obj.className = 'shown';
+            // scroll to show the details object (in case needed)
+            rect = obj.getBoundingClientRect();
+            window.scrollBy(rect.left-40, rect.top-40);
     		return true;
     	}, 'json').fail(function(jqXHR, textStatus, errorThrown){
     		console.log("Error " + textStatus + ": " + errorThrown);
@@ -148,7 +213,21 @@ var sermonsnl_admin = {
             textobj.className = 'copied';
             setTimeout(function(){textobj.className = '';}, 500);
         }else{
-            console.log("Sermons-nl: couldn't copy shortcode.");
+            // perhaps in non-secure environment (firefox only supports this on ssl secured sites)
+            // or browser not supporting writing to clipboard. Take alternative approach
+            console.log("Sermons-nl: Browser does not support copying to clipboard. Using alternative approach.");
+            txt = document.createElement('input');
+            txt.setAttribute('type','text');
+            txt.setAttribute('value',textobj.innerText);
+            txt.style.width = '100%';
+            textobj.parentNode.append(txt);
+            msg = document.createTextNode('Press Ctrl+C to copy the shortcode.');
+            textobj.parentNode.append(msg);
+            txt.select();
+            const txtdrop = () => {msg.parentNode.removeChild(msg); txt.parentNode.removeChild(txt);};
+            txt.addEventListener("copy",(event) => {txt.style.backgroundColor = '#00ff00'; setTimeout(txtdrop, 100);});
+            txt.addEventListener("focusout", txtdrop);
+            txt.addEventListener("click", (event) => {event.stopPropagation();});
         }
     },
     
@@ -255,7 +334,7 @@ var sermonsnl_admin = {
     		    return false;
     		}
     		if(response.ok === true){
-    		    // reload current view
+    		    // close detail view
     		    sermonsnl_admin.hide_details(response.event_id);
     		    // reload current month view (even though it may not be needed if the changed event if from another month)
     		    sermonsnl_admin.navigate(0);
@@ -278,6 +357,7 @@ var sermonsnl_admin = {
         count_obj = document.getElementById("sermonsnl_count");
         fmt_obj = document.getElementById("sermonsnl_datefmt");
         more_obj = document.getElementById("sermonsnl_more-buttons");
+        logo_obj = document.getElementById("sermonsnl_show-logo");
         method = method_obj.options[method_obj.selectedIndex].value;
         switch(method){
             case 'start-stop-date':
@@ -308,7 +388,66 @@ var sermonsnl_admin = {
         if(!more_obj.checked){
             shortcode = shortcode.replace(']', ' more-buttons=0]');
         }
+        if(!logo_obj.checked){
+            shortcode = shortcode.replace(']', ' sermonsnl-logo=0]');
+        }
         target_obj.innerText = shortcode;
+        return true;
+    },
+
+    toggle_manual_row : function(dt_obj,varname){
+        row = document.getElementById('sermonsnl_'+varname+'_manual');
+        if(dt_obj.options[dt_obj.selectedIndex].value == 'manual'){
+            row.className = '';
+        }else{
+            row.className = 'sermonsnl-manual-closed';
+        }
+    },
+
+    submit_update_event : function(form_obj){
+        this.wait_a_sec(1);
+        // get attributes
+        var data = new FormData(form_obj);
+        var errmsg_obj = document.getElementById('sermonsnl_event_errmsg');
+        errmsg_obj.innerText = ""; // to hide previous error upon the next save attempt
+        jQuery.ajax({
+            type: "POST",
+            url: this.admin_url,
+            data: data,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response){
+                if(!response || response.ok === null || !response.action){
+                    errmsg_obj.innerText = "Error: did not receive expected json response.";
+                    return false;
+                }
+                if(response.action != "sermonsnl_submit_update_event"){
+                    errmsg_obj.innerText = "Error: json action is not the same as requested.";
+                    return false;
+                }
+                if(response.ok === true){
+                    if(document.getElementById('sermonsnl_events_table')){
+                        sermonsnl_admin.navigate(0);
+                    }else if(document.getElementById('sermonsnl_issues_table')){
+                        // respond with a page refresh when in main page
+                        window.location.replace(window.location.pathname + window.location.search + window.location.hash);
+                    }else{
+                        console.log('Sermons-NL: this action is called from an unknown page.');
+                        return false;
+                    }
+                    return true;
+                }
+                errmsg_obj.innerText = response.errMsg;
+                return false;
+            },
+            error : function(jqXHR, textStatus, errorThrown){
+                errmsg_obj.innerText = "Error " + textStatus + ": " + errorThrown;
+            },
+            complete : function() {
+                sermonsnl_admin.wait_a_sec(0);
+            }
+        });
         return true;
     }
     
@@ -322,5 +461,6 @@ jQuery(document).ready(function($){
         $('#sermonsnl_count').on('input', sermonsnl_admin.build_shortcode);
         $('#sermonsnl_datefmt').on('input', sermonsnl_admin.build_shortcode);
         $('#sermonsnl_more-buttons').click(sermonsnl_admin.build_shortcode);
+        $('#sermonsnl_show-logo').click(sermonsnl_admin.build_shortcode);
     }
 });
