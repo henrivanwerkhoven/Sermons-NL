@@ -462,7 +462,7 @@ class sermonsNL{
                         </tr>
                         <tr>
 							<td>' . __("Sermons-NL logo","sermons-nl") . ':<sup>3</sup></td>
-							<td><input type="checkbox" id="sermonsnl_show-logo" checked/><label for="sermonsnl_show-logo"> ' . __('Display the Sermons-NL logo next to obligatory logos.','sermons-nl') . '</label></td>
+							<td><input type="checkbox" id="sermonsnl_show-logo"/><label for="sermonsnl_show-logo"> ' . __('Display the Sermons-NL logo next to obligatory logos.','sermons-nl') . '</label></td>
 						</tr>
                     </table>
                     <p><small>
