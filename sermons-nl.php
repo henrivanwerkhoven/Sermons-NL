@@ -2153,6 +2153,11 @@ class sermonsNL{
             delete_option($opt_name);
         }
     }
+
+    // LOAD TRANSLATION
+    public static function load_translation(){
+		 load_plugin_textdomain( 'sermons-nl', false, dirname(plugin_basename( __FILE__ )) . '/languages');
+	}
     
     // RECORD ACTIVITIES RELATED TO LOADING REMOTE DATA
     public static function log(string $fun, string $log){
@@ -2181,6 +2186,9 @@ require_once(plugin_dir_path(__FILE__) . 'youtube.php');
 register_activation_hook(__FILE__, array('sermonsNL', 'activate_plugin'));
 register_deactivation_hook(__FILE__, array('sermonsNL', 'deactivate_plugin'));
 register_uninstall_hook(__FILE__, array('sermonsNL', 'uninstall_plugin'));
+
+// LOAD TRANSLATION
+add_action('plugins_loaded', array('sermonsNL','load_translation'));
 
 // FILTERS TO GET THE CRON JOBS DONE (UPDATING FROM THE SOURCES)
 add_filter('cron_schedules', array('sermonsNL','add_cron_interval'));
