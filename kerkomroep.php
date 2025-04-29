@@ -14,13 +14,15 @@ class sermonsNL_kerkomroep{
     }
     
     public function __get($key){
-        if($key == 'dt_end'){
-            $result_date = strtotime(sprintf('%s +%d seconds', $this->dt, $this->duration));
-            return date('Y-m-d H:i:s', $result_date);
-        }
-        if($key == 'event'){
-            if($this->data['event_id'] === null) return null;
-            return sermonsNL_event::get_by_id($this->data['event_id']);
+        switch($key){
+            case  'dt_end':
+                $result_date = strtotime(sprintf('%s +%d seconds', $this->dt, $this->duration));
+                return date('Y-m-d H:i:s', $result_date);
+            case 'event':
+                if($this->data['event_id'] === null) return null;
+                return sermonsNL_event::get_by_id($this->data['event_id']);
+            case 'type':
+                return 'kerkomroep';
         }
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         return null;
@@ -113,8 +115,9 @@ class sermonsNL_kerkomroep{
 
 	public static function add_record($data){
 	    global $wpdb;
-	    $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_kerkomroep', $data);
-	    if($ok){
+        // use replace because sometimes two parallel processes want to save the new item at the same time
+	    $ok = $wpdb->replace($wpdb->prefix.'sermonsNL_kerkomroep', $data);
+        if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
 	    return null;
@@ -135,19 +138,10 @@ class sermonsNL_kerkomroep{
         video_url varchar(255) NULL,
         video_mimetype varchar(255) NULL,
         live tinyint(1) DEFAULT 0 NOT NULL,
-        PRIMARY KEY  (id)
+        PRIMARY KEY  (id),
+        UNIQUE KEY dt  (dt)
         ) $charset_collate;";
 	}
-
-    public static function change_mountpoint($old_value, $value){
-        if($old_value != $value){
-            global $wpdb;
-            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_kerkomroep");
-            if(!empty($value)){
-                self::get_remote_data();
-            }
-        }
-    }
 
     // METHODS TO LOAD NEW DATA FROM kerktijden.nl
     
@@ -158,7 +152,7 @@ class sermonsNL_kerkomroep{
 
 		$fp = fsockopen($protocol . $host, $port, $errno, $errstr, 30);
 		if(!$fp){
-	        wp_trigger_error("sermonsNL_kerkomroep::get_remote_data", "Could not establish connection with $host: (#$errno): $errstr", E_USER_WARNING);
+	        sermonsNL::log("sermonsNL_kerkomroep::get_remote_data", "Error: could not establish connection with $host: (#$errno): $errstr");
     		return false;
 		}
 		
@@ -181,7 +175,7 @@ class sermonsNL_kerkomroep{
         // read status
         $line = fgets($fp);
         if(strpos($line, '200') === false){
-            wp_trigger_error("sermonsNL_kerkomroep::get_remote_data","Status error while loading kerkomroep data: $line", E_USER_WARNING);
+            sermonsNL::log("sermonsNL_kerkomroep::get_remote_data","Status error while loading kerkomroep data: $line");
             fclose($fp);
 		    return false;
         }
@@ -261,6 +255,10 @@ class sermonsNL_kerkomroep{
         if(!$content) return false;
 
         $obj = simplexml_load_string($content, null, LIBXML_NOCDATA);
+        if(empty($obj->response)){
+            sermonsNL::log("sermonsNL_kerkomroep::get_remote_data", "XML->response expected but received something else.");
+            return false;
+        }
         $data = $obj->response->uitzendingen->uitzending;
         if($check_live_only){
             return self::compare_live_broadcast($data[0]);
@@ -310,7 +308,7 @@ class sermonsNL_kerkomroep{
         }else{
             if($item !== null){
                 // live broadcast no longer available. Delete it. 
-                $item->delete();
+                $item->update(array('audio_url' => null, 'video_url' => null, 'live' => 0));
             }
             // check if $remote_item exists
             self::compare_remote_to_local_data(array($remote_item));

@@ -3,7 +3,7 @@
 class sermonsNL_event{
     	// EVENT FUNCTIONS
 	
-	private static $items = null;
+	private static $events = null;
 	
     private $data = null;
     
@@ -16,9 +16,14 @@ class sermonsNL_event{
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         switch($key){
             case 'variables': return array_keys($this->data);
-            case 'kerktijden': sermonsNL::kerktijden_scripts(); return sermonsNL_kerktijden::get_by_event_id($this->id);
-            case 'kerkomroep': sermonsNL::kerkomroep_scripts(); return sermonsNL_kerkomroep::get_by_event_id($this->id);
-            case 'youtube': sermonsNL::youtube_scripts(); return sermonsNL_youtube::get_by_event_id($this->id);
+            case 'kerktijden': return sermonsNL_kerktijden::get_by_event_id($this->id);
+            case 'kerkomroep': return sermonsNL_kerkomroep::get_by_event_id($this->id);
+            case 'youtube': return sermonsNL_youtube::get_by_event_id($this->id);
+            case 'items' : return array(
+                    'kerktijden' => $this->kerktijden,
+                    'kerkomroep' => $this->kerkomroep,
+                    'youtube' => $this->youtube
+                );
             case 'dt': 
                 switch($this->data['dt_from']){
                     case 'manual': return $this->data['dt_manual'];
@@ -78,13 +83,10 @@ class sermonsNL_event{
     public function delete(){
         global $wpdb;
         $wpdb->delete($wpdb->prefix.'sermonsNL_events', array('id' => $this->id));
-        unset(self::$items[$this->id]);
+        unset(self::$events[$this->id]);
     }
     
     public function get_all_items(){
-        sermonsNL::kerktijden_scripts();
-        sermonsNL::kerkomroep_scripts();
-        sermonsNL::youtube_scripts();
         $ret = array();
         $kt = sermonsNL_kerktijden::get_all_by_event_id($this->id);
         if(!empty($kt)) $ret['kerktijden'] = $kt;
@@ -96,28 +98,28 @@ class sermonsNL_event{
     }
 
 	public static function get_all(){
-	    if(self::$items === null){
-	        self::$items = array();
+	    if(self::$events === null){
+	        self::$events = array();
     	    global $wpdb;
 	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events ORDER BY dt_min", OBJECT_K);
 	        foreach($data as $key => $object){
-	            self::$items[$key] = new self($object);
+	            self::$events[$key] = new self($object);
 	        }
 	    }
-	    return self::$items;
+	    return self::$events;
 	}
 
 	public static function get_by_id(int $id){
-	    $items = self::get_all();
-	    if(!isset($items[$id])){
+	    $events = self::get_all();
+	    if(!isset($events[$id])){
 	        global $wpdb;
 	        $record = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events where id=$id", OBJECT_K);
 	        if(empty($record)){
 	            return null;
 	        }
-	        self::$items[$id] = new self($record[$id]);
+	        self::$events[$id] = new self($record[$id]);
 	    }
-	    return self::$items[$id];
+	    return self::$events[$id];
 	}
 	
 	public static function get_by_dt(string $dt, ?string $dt2=null, bool $include_all=false){
@@ -155,8 +157,8 @@ class sermonsNL_event{
         dt_max datetime NULL,
         pastor_from enum('auto','manual','kerktijden','kerkomroep') DEFAULT 'auto' NOT NULL,
         pastor_manual varchar(255) NULL,
-        type_from enum('auto','manual', 'kerktijden') DEFAULT 'auto' NOT NULL,
-        type_manual varchar(255) NULL,
+        sermontype_from enum('auto','manual', 'kerktijden') DEFAULT 'auto' NOT NULL,
+        sermontype_manual varchar(255) NULL,
         description_from enum('auto','manual','kerkomroep','youtube') DEFAULT 'auto' NOT NULL,
         description_manual varchar(65535) NULL,
         include tinyint(1) DEFAULT 1 NOT NULL,

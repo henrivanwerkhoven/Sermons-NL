@@ -1,18 +1,24 @@
 <?php
 
 /*
-	Plugin Name: Sermons Netherlands
+	Plugin Name: Sermons-NL
 	Plugin URI: 
 	Description: List planned and broadcasted Dutch church services in a convenient way
 	Version: 0.1
 	Author: Henri van Werkhoven
-	Author URI: 
+	Author URI: https://github.com/henrivanwerkhoven/Sermons-NL
 	License: GPL2
-	Text Domain: sermons
-	Domain Path: NULL
+	Text Domain: sermons-nl
+	Domain Path: /languages
 */
 
 class sermonsNL{
+
+	const PLUGIN_URL = "https://github.com/henrivanwerkhoven/Sermons-NL";
+	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
+	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
+	const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
+
 
     // SETTINGS
     // timezones are defined at the end of this file
@@ -28,11 +34,13 @@ class sermonsNL{
         "sermonsNL_kerktijden_weeksback"           => array('type' => 'integer', 'default' => 52),
         "sermonsNL_kerktijden_weeksahead"          => array('type' => 'integer', 'default' => 52),
         "sermonsNL_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
-        "sermonsNL_kerkdienstgemist_rssid"         => array('type' => 'integer', 'default' => null),
-        "sermonsNL_kerkdienstgemist_audiostreamid" => array('type' => 'integer', 'default' => null),
-        "sermonsNL_kerkdienstgemist_videostreamid" => array('type' => 'integer', 'default' => null),
+        //"sermonsNL_kerkdienstgemist_rssid"         => array('type' => 'integer', 'default' => null),
+        //"sermonsNL_kerkdienstgemist_audiostreamid" => array('type' => 'integer', 'default' => null),
+        //"sermonsNL_kerkdienstgemist_videostreamid" => array('type' => 'integer', 'default' => null),
         "sermonsNL_youtube_channel"                => array('type' => 'string',  'default' => null),
-        "sermonsNL_youtube_key"                    => array('type' => 'string',  'default' => null)
+        "sermonsNL_youtube_key"                    => array('type' => 'string',  'default' => null),
+		"sermonsNL_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
+		"sermonsNL_last_update_time"               => array('type' => 'integer', 'default' => 0)
     );
 
 	public static function register_settings(){
@@ -88,9 +96,9 @@ class sermonsNL{
 	        e.id, 
 	        e.include, 
 	        e.protected,
-	        (case when dt_from='manual' then e.dt_manual
-                  when dt_from='kerktijden' then kt.dt
-                  when dt_from='kerkomroep' then ko.dt
+	        (case when dt_from='manual' AND e.dt_manual IS NOT NULL then e.dt_manual
+                  when dt_from='kerktijden' AND kt.dt IS NOT NULL then kt.dt
+                  when dt_from='kerkomroep' AND ko.dt IS NOT NULL then ko.dt
                   when dt_from='youtube' AND yt.dt_planned IS NOT NULL then yt.dt_planned
                   when dt_from='youtube' AND yt.dt_actual IS NOT NULL then yt.dt_actual
                   when kt.dt IS NOT NULL then kt.dt
@@ -99,8 +107,8 @@ class sermonsNL{
                   when yt.dt_actual IS NOT NULL then yt.dt_actual
                   else e.dt_min
                   end) as dt_start,
-            (case when type_from='manual' then e.type_manual
-                  when type_from='kerktijden' then kt.sermontype
+            (case when sermontype_from='manual' then e.sermontype_manual
+                  when sermontype_from='kerktijden' then kt.sermontype
                   else kt.sermontype
                   end) as sermontype,
             (case when pastor_from='manual' then e.pastor_manual
@@ -251,78 +259,69 @@ class sermonsNL{
 	public static function get_item_by_type(string $type, int $id){
 	    switch($type){
 	        case 'kerktijden':
-	            self::kerktijden_scripts();
 	            return sermonsNL_kerktijden::get_by_id($id);
 	        case 'kerkomroep':
-	            self::kerkomroep_scripts();
 	            return sermonsNL_kerkomroep::get_by_id($id);
 	        case 'youtube':
-	            self::youtube_scripts();
 	            return sermonsNL_youtube::get_by_id($id);
 	        default:
 	            wp_trigger_error(__CLASS__."::get_item_by_type", "Wrong type '$type' parsed.", E_USER_ERROR);
 	            return null;
 	    }
 	}
-	
-	
-	// KERKTIJDEN FUNCTIONS
-	
-	// dynamically load additional scripts
-	public static function kerktijden_scripts(){
-	    require_once(plugin_dir_path(__FILE__) . 'kerktijden.php');
+
+
+	// this can be called for youtube and kerktijden to load the archive in the background when the
+	// settings have changed, because these processes are slow and we don't want the user to wait for it
+	public static function get_remote_data_in_background(){
+
+		// check that this is called in the background
+		check_ajax_referer('sermonsnl-background-action');
+
+		ignore_user_abort();
+		set_time_limit(999);
+
+		$resources = explode(",", $_GET['resources']);
+
+		$done = array();
+
+		// load kerktijden archive
+		if(array_search('kt', $resources) !== false){
+			sermonsNL_kerktijden::get_remote_data_forward();
+			sermonsNL_kerktijden::get_remote_data_backward();
+			$done[] = 'kt';
+		}
+
+		// load kerkomroep archive
+		if(array_search('ko', $resources) !== false){
+			sermonsNL_kerkomroep::get_remote_data();
+			$done[] = 'ko';
+		}
+
+		// load youtube archive
+		if(array_search('yt', $resources) !== false){
+			sermonsNL_youtube::get_remote_data();
+			$done[] = 'yt';
+		}
+
+		print json_encode(array('action' => 'sermonsNL_get_remote_data_in_background', 'done' => $done));
+		wp_die();
 	}
-	
-	// trigger a reset when the kerktijden_id setting changes
-	public static function kerktijden_change_id($old_value, $value){
-	    self::kerktijden_scripts();
-	    sermonsNL_kerktijden::change_id($old_value, $value);
-	}
-	
-	
-	// KERKOMROEP FUNCTIONS
-	
-	// dynamically load additional scripts
-	public static function kerkomroep_scripts(){
-	    require_once(plugin_dir_path(__FILE__) . 'kerkomroep.php');
-	}
-	
-	// trigger a reset when the kerkomroep_mountpoint setting changes
-	public static function kerkomroep_change_mountpoint($old_value, $value){
-	    self::kerkomroep_scripts();
-	    sermonsNL_kerkomroep::change_mountpoint($old_value, $value);
-	}
-	
-	
-	// YOUTUBE FUNCTIONS
-	
-	// dynamically load additional scripts
-	public static function youtube_scripts(){
-	    require_once(plugin_dir_path(__FILE__) . 'youtube.php');
-	}
-	
-	// trigger a reset when the kerkomroep_mountpoint setting changes
-	public static function youtube_change_channel($old_value, $value){
-	    self::youtube_scripts();
-	    sermonsNL_youtube::change_channel($old_value, $value);
-	}
-	
 
     // ADMIN PAGE HANDLING
     public static function add_admin_menu(){
         $num_issues = count(self::get_events_with_issues());
         $tag_issue = ($num_issues ? ' <span class="awaiting-mod">'.$num_issues.'</span>' : '');
-        add_menu_page(__('SermonsNL','sermons-nl'), __('SermonsNL','sermons-nl') . $tag_issue, self::$capability, 'sermons-nl', array('sermonsNL','admin_overview_page'), 'dashicons-admin-media', 7);
-        add_submenu_page('sermons-nl', __('SermonsNL administration','sermons-nl'), __('Administration','sermons-nl'), self::$capability, 'sermons-nl-admin', array('sermonsNL','admin_administration_page'));
-	    add_submenu_page('sermons-nl', __('SermonsNL configuration','sermons-nl'), __('Configuration','sermons-nl'), self::$capability, 'sermons-nl-config', array('sermonsNL','admin_edit_config_page'));
-	    add_submenu_page('sermons-nl', __('SermonsNL log','sermons-nl'), __('Log','sermons-nl'), self::$capability, 'sermons-nl-log', array('sermonsNL','admin_view_log_page'));
-	    add_submenu_page('sermons-nl', __('SermonsNL testpage','sermons-nl'), __('Test page','sermons-nl'), self::$capability, 'sermons-nl-test', array('sermonsNL','admin_test_page'));
+        add_menu_page('Sermons-NL', 'Sermons-NL' . $tag_issue, self::$capability, 'sermons-nl', array('sermonsNL','admin_overview_page'), 'dashicons-admin-media', 7);
+        add_submenu_page('sermons-nl', __('Sermons-NL administration','sermons-nl'), __('Administration','sermons-nl'), self::$capability, 'sermons-nl-admin', array('sermonsNL','admin_administration_page'));
+	    add_submenu_page('sermons-nl', __('Sermons-NL configuration','sermons-nl'), __('Configuration','sermons-nl'), self::$capability, 'sermons-nl-config', array('sermonsNL','admin_edit_config_page'));
+	    add_submenu_page('sermons-nl', __('Sermons-NL log','sermons-nl'), __('Log','sermons-nl'), self::$capability, 'sermons-nl-log', array('sermonsNL','admin_view_log_page'));
 	}
-	
+
 	public static function add_admin_scripts_and_styles($hook){
 	    if(strpos($hook,'sermons-nl') === false) return;
-	    wp_enqueue_style('sermonsNL-admin-css', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.4');
-		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.5');
+	    wp_enqueue_style('sermonsNL-admin-css', plugin_dir_url(__FILE__).'css/admin.css', array(), '1.0.1');
+		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '1.0.1');
 	}
 	
 	public static function add_admin_custom_script($hook){
@@ -335,10 +334,9 @@ class sermonsNL{
 		if(!current_user_can(self::$capability)){
 			wp_die("No permission");
 		}
+
+		global $wpdb;
 		
-		self::kerktijden_scripts();
-		self::kerkomroep_scripts();
-		self::youtube_scripts();
 		$events = sermonsNL_event::get_all();
 		$kerktijden = sermonsNL_kerktijden::get_all();
 		$kerkomroep = sermonsNL_kerkomroep::get_all();
@@ -346,10 +344,16 @@ class sermonsNL{
 		
         $issues = self::get_events_with_issues();
 
+		$cron_msg = (!defined('DISABLE_WP_CRON') || !DISABLE_WP_CRON);
+
+		$log_dt = $wpdb->get_results("SELECT max(dt) AS dt FROM {$wpdb->prefix}sermonsNL_log");
+		$log_time = time() - (new DateTime($log_dt[0]->dt, self::$timezone_db))->getTimestamp();
+		$cron_fail = ($log_time > 24 * 3600);
+
 		print '
 		<div class="sermonsnl-overview">
 		    <h2>
-		        ' . __("SermonsNL overview page","sermons-nl") . '
+		        ' . __("Sermons-NL overview page","sermons-nl") . '
 	            <img src="' . plugin_dir_url(__FILE__) . 'img/waiting.gif" id="sermonsnl_waiting"/><!-- icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ -->
     	    </h2>
 		    <div class="sermonsnl-container">
@@ -359,11 +363,24 @@ class sermonsNL{
                     sprintf(__('Your site includes a total of %d sermons.','sermons-nl'), count($events)) . 
                     ' ' .
                     sprintf(__('These are based on %d entries from Kerktijden, %d from Kerkomroep, and %d from Youtube.', 'sermons-nl'), count($kerktijden), count($kerkomroep), count($youtube)) . 
-                    '</p>
+                    '</p>';
+		if($cron_msg){
+			print '
+					<p>' .
+				sprintf(__('<strong>Note: It is recommended to disable WordPress cron.</strong> Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs. The recommended frequency of cron jobs is once every 15 minutes. %s Please refer to this instruction. %s','sermons-nl'),'<a href="https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs/" target="_blank">','</a>') .
+				'</p>';
+		}elseif($cron_fail){
+			print '
+					<p>' .
+					sprintf(__('<strong>Note: the last check for updates is %d hours ago. It seems that the cron job is not correctly configured. %s Please refer to this instruction. %s', 'sermons-nl'), round($log_time / 3600), '<a href="https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs/" target="_blank">', '</a>') .
+					'</p>';
+		}
+		print '
                     <p>';
         if(!empty($issues)){
-            print sprintf(__("There are %d issues that require your attention.", 'sermons-nl'), count($issues)); 
-        }else{
+            print '<strong>' . sprintf(__("There are %d issues that require your attention.", 'sermons-nl'), count($issues)) . '</strong>';
+        }
+        if(empty($issues) && !$cron_msg && !$cron_fail){
             print __("There are currently no issues to resolve.","sermons-nl");
         }
         print '</p>
@@ -388,7 +405,7 @@ class sermonsNL{
             foreach($issues as $event){
                 print '
                             <tr>
-                                <td><a href="javascript:;" onclick="sermonsnl_admin.show_details(' . $event->id . ');">' . self::datefmt('short', $event->dt_start) . '</a></td>
+                                <td><a href="javascript:;" onclick="sermonsnl_admin.show_details(' . $event->id . ');">' . ucfirst(self::datefmt('short', $event->dt_start)) . '</a></td>
                                 <td>' . $event->n_kt . '</td>
                                 <td>' . $event->n_ko . '</td>
                                 <td>' . $event->n_yt . '</td>
@@ -403,19 +420,12 @@ class sermonsNL{
         }
         
         print '
-            </div>
-            <div class="sermonsnl-container">
                 <h3>' . __("Shortcode builder","sermons-nl") . ':</h3>
                 <div>
                     <p>' . __("Build a shortcode to insert the list of sermons to your page.","sermons-nl") . '</p>
-                    <p><small>' . 
-            sprintf(__('For start and end date, you can enter any text that can be interpreted as a date based on supported %s formats.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.formats.php" target="_blank">DateTime</a>') . 
-            ' ' .
-            sprintf(__('The date format, that is used for printing the sermon dates can be either "long" or "short" (which will print a long or short date format followed by hours and minutes) or a suitable date-time format, see %s.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank">DateTime::format()</a>') .
-            '</small></p>
                     <p>
                         <a class="sermonsnl-copyshort" onclick="sermonsnl_admin.copy_shortcode(this);" title="' . __('Click to copy the shortcode','sermons-nl') . '">
-        		            <img src="https://zandbak.cgkzeist.nl/wp-content/plugins/sermons-nl/img/copy.png"> 
+        		            <img src="' . plugin_dir_url(__FILE__) . 'img/copy.png">
         		            <span id="sermonsnl_shortcode">[sermons-nl-list offset="now -13 days" ending="now +8 days"]</span>
         		        </a>
     		        </p>
@@ -431,33 +441,54 @@ class sermonsNL{
                             </td>
                         </tr>
                         <tr>
-                            <td>' . __("Start date",'sermons-nl') . '</td>
+                            <td>' . __("Start date",'sermons-nl') . ':<sup>1</sup></td>
                             <td><input type="text" id="sermonsnl_start_date" value="now -13 days"/></td>
                         </tr>
                         <tr>
-                            <td>' . __("End date",'sermons-nl') . '</td>
+                            <td>' . __("End date",'sermons-nl') . ':<sup>1</sup></td>
                             <td><input type="text" id="sermonsnl_end_date" value="now +8 days"/></td>
                         </tr>
                         <tr>
-                            <td>' . __("Number of events,'sermons-nl'") . '</td>
+                            <td>' . __("Number of events",'sermons-nl') . ':</td>
                             <td><input type="text" id="sermonsnl_count" value="10" disabled/></td>
                         </tr>
                         <tr>
-                            <td>' . __('Date format (default: "long")',"sermons-nl") . '</td>
+                            <td>' . __("Date format",'sermons-nl') . ':<sup>2</sup></td>
                             <td><input type="text" id="sermonsnl_datefmt", value="long"/></td>
                         </tr>
                         <tr>
-                            <td>' . __("Buttons","sermons-nl") . '</td>
-                            <td><input type="checkbox" id="sermonsnl_more-buttons" checked/><label for="sermonsnl_more-buttons"> ' . __('Include buttons to load earlier and later sermons (default: on)','sermons-nl') . '</label></td>
+                            <td>' . __("Buttons","sermons-nl") . ':</td>
+                            <td><input type="checkbox" id="sermonsnl_more-buttons" checked/><label for="sermonsnl_more-buttons"> ' . __('Include buttons to load earlier and later sermons','sermons-nl') . '</label></td>
                         </tr>
+                        <tr>
+							<td>' . __("Sermons-NL logo","sermons-nl") . ':<sup>3</sup></td>
+							<td><input type="checkbox" id="sermonsnl_show-logo" checked/><label for="sermonsnl_show-logo"> ' . __('Display the Sermons-NL logo next to obligatory logos.','sermons-nl') . '</label></td>
+						</tr>
                     </table>
+                    <p><small>
+						<sup>1</sup> ' .
+                    sprintf(__('For start and end date, you can enter any text that can be interpreted as a date based on supported %s formats.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.formats.php" target="_blank">DateTime</a>') .
+					'<br/>
+						<sup>2</sup> ' .
+					sprintf(__('The date format, that is used for printing the sermon dates can be either "long" or "short" (which will print a long or short date format followed by hours and minutes) or a suitable date-time format, see %s.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank">DateTime::format()</a>') .
+					'<br/>
+						<sup>3</sup>' .
+					__('The Sermons-NL logo will be displayed next to the (anyway obligatory) logos of services that are used. Thank you if you keep this checked to help others find the plugin!', 'sermons-nl') .
+					'</small></p>
                 </div>
             </div>
             <div class="sermonsnl-container">
                 <h3>' . __("Frequently asked questions","sermons-nl") . ':</h3>
-                <div>
-                    <h4>Why does Sermons-NL not support Kerkdienst Gemist?</h4>
-                    <p>Kerkdienst Gemist is a service similar to Kerkomroep. Initially, only Kerkomroep was included, because the church for which the plugin was first developed uses that service. However, support for Kerkdienst Gemist is possible and planned in one of the next releases. We welcome volunteers to test this functionality in a beta version. Please visit the issue page and add your reaction or send an e-mail to the developer.</p>
+                <div>';
+		$readme = file_get_contents(plugin_dir_path(__FILE__) . "readme.txt");
+		preg_match("/== Frequently Asked Questions ==(.*?)==/is", $readme, $matches);
+		$qa = preg_split("( =|= )", $matches[1]);
+		for($i=1; $i < count($qa); $i += 2){
+			print '
+					<h4>' . $qa[$i] . '</h4>
+					<p>' . nl2br(trim($qa[$i+1])) . '</p>';
+		}
+		print '
                 </div>
             </div>';
         
@@ -518,7 +549,7 @@ class sermonsNL{
 		$data = self::get_complete_records_by_dates($dt1, $dt2, true, true);
 
         $html = '
-    		    <h3 id="sermonsnl_admin_month">' . __(date("F", strtotime($dt1)), "sermons-nl") . ' ' . date("Y", strtotime($dt1)) . '</h3>';
+    		    <h3 id="sermonsnl_admin_month">' . ucfirst(wp_date("F Y", strtotime($dt1))) . '</h3>';
 		if(empty($data)){
 		    $html .= '<p>' . __('No records found.','sermons-nl') . '</p>';
 		}else{
@@ -537,8 +568,9 @@ class sermonsNL{
 	        foreach($data as $rec){
 	            $html .= '
 	              <tr>
-	                <td>' . ($rec->include ? '' : '<img src="' . plugin_dir_url(__FILE__) . 'img/not_included.gif" alt="X" title="' . __("Not included","sermons-nl") . '"/>') . '</td>
-	                <td><a href="javascript:;" onclick="sermonsnl_admin.show_details('.$rec->id.');">' . self::datefmt("short", $rec->dt_start) . '</a></td>
+	                <td>' . ($rec->include ? '' : '<img src="' . plugin_dir_url(__FILE__) . 'img/not_included.gif" alt="X" title="' . __("Not included","sermons-nl") . '"/>') .
+					($rec->protected ? '<img src="' . plugin_dir_url(__FILE__) . 'img/protected.png" alt="8" title="' . __("Protected","sermons-nl") . '" height="20"/>' : '') . '</td>
+	                <td><a href="javascript:;" onclick="sermonsnl_admin.show_details('.$rec->id.');">' . ucfirst(self::datefmt("short", $rec->dt_start)) . '</a></td>
 	                <td>' . $rec->pastor . '</td>
 	                <td>' . ($rec->kt_id ? '<img src="' . plugin_dir_url(__FILE__) . 'img/has_kt.gif" alt="KT" title="' . __("Uses Kerktijden source","sermons-nl") . '"/>' : '') . '</td>
 	                <td>' . ($rec->ko_id ? '<img src="' . plugin_dir_url(__FILE__) . 'img/has_ko.gif" alt="KO" title="' . __("Uses Kerkomroep source","sermons-nl") . '"/>' : '') . '</td>
@@ -560,33 +592,23 @@ class sermonsNL{
 		if($_GET['event_id'] === ""){
 		    $html = '
 		        <h3>
-		            <img src="' . plugin_dir_url(__FILE__) . 'img/close.gif" class="sermonsnl-closebtn" title="'.__("Cancel","sermons-nl").'" onclick="if(confirm(\''.__('Do you want to cancel creating this new event?') . '\')) sermonsnl_admin.hide_details(null);"/>
+		            <img src="' . plugin_dir_url(__FILE__) . 'img/close.gif" class="sermonsnl-closebtn" title="'.__("Cancel","sermons-nl").'" onclick="sermonsnl_admin.hide_details(null);"/>
 		            Create event manually
-		        </h3>
-		        <form method="post" onsubmit="return !sermonsNL_admin.create_new_event(this);">
-		            <input type="hidden" name="action" value="sermonsnl_new_event"/>
-		            <input type="hidden" name="_wpnonce" value="' . wp_create_nonce('sermonsnl-administration') . '"/>
-    		        <table>
-	    	            <tbody>
-		                    <tr>
-		                        <td>' . __('Date','sermons-nl') . ':</td>
-		                        <td><input type="text" name="date" value=""/></td>
-		                    </tr>
-		                    <tr>
-		                        <td>' . __('Settings','sermons-nl') . ':</td>
-		                        <td><input type="checkbox" name="include" id="sermonsnl-new-include" checked/><label for="sermonsnl-new-include"> Include in sermons list</label></td>
-	                        </tr>
-	                        <tr>
-	                            <td></td>
-	                            <td><input type="checkbox" name="protected" id="sermonsnl-new-protected" checked/><label for="sermonsnl-new-protected"> Protect from automatic deletion*</label></td>
-	                        </tr>
-		                    <tr>
-	                            <td></td>
-	                            <td><input type="submit" value="' . __('Save','sermons-nl') . '"/></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </form>';
+		        </h3>';
+			$event = (object) array(
+				"id" => 0,
+				"dt_from" => "manual",
+				"dt_manual" => null,
+				"sermontype_from" => "auto",
+				"sermontype_manual" => null,
+				"pastor_from" => "auto",
+				"pastor_manual" => null,
+				"description_from" => "auto",
+				"description_manual" => null,
+				"include" => 1,
+				"protected" => 1
+			);
+			$html .= self::html_form_update_event($event);
 		}else{
 		    $event_id = (int)$_GET['event_id'];
     		$html = '
@@ -598,7 +620,7 @@ class sermonsNL{
         		        <li>Items not linked to an event will not be shown in the sermons listing.</li>
             		    <li>Link the item to an existing event by clicking the date or create a new one.</li>
             		    <li>For new events, the date and time of the linked item is used.</li>
-        		        <li>Or copy the shortcode for using this single item in a message or page.</li>
+        		        <li>Or copy the shortcode for adding the single item to your website.</li>
         		    </ul>';
     		    if(empty($items)){
     		        $html .= '
@@ -619,15 +641,19 @@ class sermonsNL{
             		    $html .= '
             		        <tr>
             		            <td>' . $item->item_type . '</td>
-            		            <td>' . self::datefmt("short", $item->dt) . '</td>
-            		            <td>
+            		            <td>' . ucfirst(self::datefmt("short", $item->dt)) . '</td>
+            		            <td>';
+						if($item->item_type != 'kerktijden'){
+							$html .= '
             		                <a onclick="sermonsnl_admin.copy_shortcode(this);" title="' . __('Click to copy the shortcode','sermons-nl') . '" class="sermonsnl-copyshort">
             		                    <img src="' . plugin_dir_url(__FILE__) . 'img/copy.png"/>
             		                    Shortcode
             		                    <div>';
-            		    $html .= '[sermons-nl-item type="' . $item->item_type . '" id="' . $item->id . '"]';
-            		    $html .= '</div>
-            		                </a>
+							$html .= '[sermons-nl-item type="' . $item->item_type . '" id="' . $item->id . '"]';
+							$html .= '</div>
+            		                </a>';
+						}
+						$html .= '
             		            </td>
             		            <td>
             		                <a class="sermonsnl-linktoevent"><img src="' . plugin_dir_url(__FILE__) . 'img/link.png"/> ' . __('Link to event','sermons-nl') . '<div><ul>';
@@ -644,7 +670,7 @@ class sermonsNL{
                 		        $html .= '<li onclick="sermonsnl_admin.link_item_to_event(\''.$item->item_type.'\', '.$item->id.', '.$event->id.');">';
                 		        $dt = $event->dt;
             		            if($dt){
-            		                $html .= self::datefmt('short', $event->dt);
+            		                $html .= ucfirst(self::datefmt('short', $event->dt));
             		            }
             		            $html .= '</li>';
             		        }
@@ -663,7 +689,7 @@ class sermonsNL{
     		    if(!$event){
     		        $html = "Error: no event with id #$event_id.</h3>";
     		    }else{
-        		    $html .= self::datefmt("short", $event->dt) . '</h3>
+        		    $html .= ucfirst(self::datefmt("short", $event->dt)) . '</h3>
         		    <div>
             		    <a class="sermonsnl-copyshort" onclick="sermonsnl_admin.copy_shortcode(this);" title="' . __('Click to copy the shortcode','sermons-nl') . '">
         		            <img src="' . plugin_dir_url(__FILE__) . 'img/copy.png" /> 
@@ -688,41 +714,30 @@ class sermonsNL{
         		        <table>';
         		        foreach($items as $type => $subitems){
         		            foreach($subitems as $item){
-        		                $html .= '<tr><td>' . ucfirst($type) . '</td><td>' . self::datefmt("short", $item->dt) . '</td>';
-        		                $html .= '<td>
-        		                    <a onclick="sermonsnl_admin.copy_shortcode(this);" title="' . __('Click to copy the shortcode','sermons-nl') . '" class="sermonsnl-copyshort">
-        		                        <img src="' . plugin_dir_url(__FILE__) . 'img/copy.png"/>
-        		                        Shortcode
-        		                        <div>';
-            		    $html .= '[sermons-nl-item type="' . $type . '" id="' . $item->id . '"]';
-            		    $html .= '</div>
-            		                </a>
-            		            </td>';
-        		                $html .= '<td><a class="sermonsnl-linktoevent" href="javascript:;" onclick="sermonsnl_admin.unlink_item(\'' . $type . '\', ' . $item->id . ');"><img src="' . plugin_dir_url(__FILE__) . 'img/link.png"/> ' . __('Unlink item','sermons-nl') . '</a></td>';
-        		                $html .= '</tr>';
+        		                $html .= '
+        		                <tr>
+									<td>' . ucfirst($type) . '</td><td>' . ucfirst(self::datefmt("short", $item->dt)) . '</td>
+									<td>';
+								if($type != 'kerktijden'){
+									$html .= '
+										<a onclick="sermonsnl_admin.copy_shortcode(this);" title="' . __('Click to copy the shortcode','sermons-nl') . '" class="sermonsnl-copyshort">
+											<img src="' . plugin_dir_url(__FILE__) . 'img/copy.png"/>
+											Shortcode
+											<div>';
+									$html .= '[sermons-nl-item type="' . $type . '" id=' . $item->id . ']';
+									$html .= '</div>
+										</a>';
+								}
+								$html .= '
+									</td>
+									<td><a class="sermonsnl-linktoevent" href="javascript:;" onclick="sermonsnl_admin.unlink_item(\'' . $type . '\', ' . $item->id . ');"><img src="' . plugin_dir_url(__FILE__) . 'img/link.png"/> ' . __('Unlink item','sermons-nl') . '</a></td>
+								</tr>';
         		            }
         		        }
-        		        $html .= '</table>';
+        		        $html .= '
+        		        </table>';
         		    }
-        		    //  class="wp-list-table widefat fixed striped pages"
-        		    $html .= '
-        		    <p><b>' . __('Event settings', 'sermons-nl') . '</b></p>
-        		    <form id="sermonsnl_update_event">
-        		        <table>
-        		            <tr>
-        		                <td>Date time:</td>
-        		                <td><select name="dt_from">';
-        		    foreach(array('auto','manual','kerktijden','kerkomroep','youtube') as $value){
-        		        $html .= '<option value="'.$value.'"' . ($value == $event->dt_from ? ' selected="selected"' : '') . '>' . $value . '</option>';
-        		    }
-        		    $html .= '</select></td>
-        		            </tr>
-        		            <tr>
-        		                <td>' . __('Manual date:') . '</td>
-        		                <td><input type="text" name="dt_manual" value="' . ($event->dt_manual === null ? "" : $event->dt_manual) . '"/></td>
-        		            </tr>
-        		        </table>
-        		    </form>';
+        		    $html .= self::html_form_update_event($event);
     		    }
     		}
 		}
@@ -734,6 +749,160 @@ class sermonsNL{
 		ob_clean();
 		print json_encode($json);
 		wp_die();
+	}
+
+	private static function html_form_update_event($event){
+		$html = '
+		<form id="sermonsnl_update_event" onsubmit="return !sermonsnl_admin.submit_update_event(this);">
+			<input type="hidden" name="_wpnonce" value="' . wp_create_nonce('sermonsnl-administration') . '"/>
+			<input type="hidden" name="action" value="sermonsnl_submit_update_event"/>
+			<input type="hidden" name="event_id" value="' . $event->id . '"/>
+			<div id="sermonsnl_event_errmsg"></div>
+			<table>
+				<tr>
+					<td><h4>' . __('Event settings', 'sermons-nl') . '</h4></td>
+					<td><input type="submit" value="' . __('Save settings','sermons-nl') . '"/></td>
+				</tr>
+				<tr>
+					<td>' . __('Select date-time from','sermons-nl') . ': <sup>1</sup></td>
+					<td><select name="dt_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'dt\');">';
+		foreach(array('auto','manual','kerktijden','kerkomroep','youtube') as $value){
+			$html .= '<option value="'.$value.'"' . ($value == $event->dt_from ? ' selected="selected"' : '') . '>' . $value . '</option>';
+		}
+		$html .= '</select></td>
+				</tr>
+				<tr id="sermonsnl_dt_manual"' . ($event->dt_from == 'manual' ? '' : ' class="sermonsnl-manual-closed"') . '>
+					<td></td>
+					<td><input type="datetime-local" name="dt_manual"';
+		if($event->dt_manual !== null){
+			$dt = new DateTime($event->dt_manual, self::$timezone_db);
+			$dt->setTimeZone(wp_timezone());
+			$html .= ' value="' . $dt->format("Y-m-d\TH:i") . '"';
+		}
+		$html .= '/></td>
+				</tr>
+				<tr>
+					<td>' . __('Select sermon type from','sermons-nl') . ': <sup>2</sup></td>
+					<td><select name="sermontype_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'sermontype\');">';
+		foreach(array('auto','manual','kerktijden') as $value){
+			$html .= '<option value="'.$value.'"' . ($value == $event->sermontype_from ? ' selected="selected"' : '') . '>' . $value . '</option>';
+		}
+		$html .= '</select></td>
+				</tr>
+				<tr id="sermonsnl_sermontype_manual"' . ($event->sermontype_from == 'manual' ? '' : ' class="sermonsnl-manual-closed"') . '>
+					<td></td>
+					<td><input type="text" name="sermontype_manual"' . ($event->sermontype_manual === null ? '' : ' value="' . esc_html($event->sermontype_manual)) . '"/></td>
+				</tr>
+				<tr>
+					<td>' . __('Select pastor name from','sermons-nl') . ': <sup>3</sup></td>
+					<td><select name="pastor_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'pastor\');">';
+		foreach(array('auto','manual','kerktijden','kerkomroep') as $value){
+			$html .= '<option value="'.$value.'"' . ($value == $event->pastor_from ? ' selected="selected"' : '') . '>' . $value . '</option>';
+		}
+		$html .= '</select></td>
+				</tr>
+				<tr id="sermonsnl_pastor_manual"' . ($event->pastor_from == 'manual' ? '' : ' class="sermonsnl-manual-closed"') . '>
+					<td></td>
+					<td><input type="text" name="pastor_manual"' . ($event->pastor_manual === null ? '' : ' value="' . esc_html($event->pastor_manual)) . '"/></td>
+				</tr>
+				<tr>
+					<td>' . __('Select description from','sermons-nl') . ': <sup>4</sup></td>
+					<td><select name="description_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'description\');">';
+		foreach(array('auto','manual','kerktijden','kerkomroep') as $value){
+			$html .= '<option value="'.$value.'"' . ($value == $event->description_from ? ' selected="selected"' : '') . '>' . $value . '</option>';
+		}
+		$html .= '</select></td>
+				</tr>
+				<tr id="sermonsnl_description_manual"' . ($event->description_from == 'manual' ? '' : ' class="sermonsnl-manual-closed"') . '>
+					<td></td>
+					<td><textarea name="description_manual">' . esc_html($event->description_manual) . '</textarea></td>
+				</tr>
+				<tr>
+					<td>' . __('Other settings','sermons-nl') . ':</td>
+					<td><input type="checkbox" name="include" id="sermonsnl_include"' . ($event->include ? ' checked' : '') . '/><label for="sermonsnl_include"> Include in sermons list</label></td>
+				</tr>
+				<tr>
+					<td></td>
+					<td><input type="checkbox" name="protected" id="sermonsnl_protected"' . ($event->protected ? ' checked' : '') . '/><label for="sermonsnl_protected"> Protect from automated deletion <sup>5</sup></label></td>
+				</tr>
+			</table>
+			<p class="sermonsnl-footnotes">
+				<sup>1.</sup> If auto is selected or if an item is selected that has no date-time, the order of picking the date-time is (based on availability): kerktijden, youtube (if it has a planned date), kerkomroep, youtube (if it has been broadcasted).<br/>
+				<sup>2.</sup> If auto is selected, sermons type will be selected from kerktijden.<br/>
+				<sup>3.</sup> If auto is selected, pastor name will be selected from kerktijden or kerkomroep (in this order based on availability).<br/>
+				<sup>4.</sup> If auto is selected, description will be seelcted from youtube or kerkomroep (in this order, based on availability).<br/>
+				<sup>5.</sup> Events that have no linked items are deleted over  night. Tick this box to prevent that from happening.
+			</p>
+		</form>';
+		return $html;
+	}
+
+	public static function sermonsnl_submit_update_event(){
+		// check permission
+		if(!current_user_can(self::$capability)){
+			wp_die("No permission");
+		}
+		// check nonce
+		check_ajax_referer('sermonsnl-administration');
+		// prep json function
+		function returnIt(bool $ok, $errMsg = null){
+			$json = array("action" => "sermonsnl_submit_update_event", "ok" => $ok);
+			if($errMsg) $json['errMsg'] = $errMsg;
+			ob_clean();
+			print json_encode($json);
+			wp_die();
+		}
+		// process posted data
+		$event_id = (int)$_POST['event_id'];
+		if(empty($_POST['dt_manual'])){
+			$dt_manual = null;
+		}else{
+			$dt_manual = new DateTime($_POST['dt_manual'], wp_timezone());
+			if($dt_manual) $dt_manual = $dt_manual->setTimeZone(self::$timezone_db)->format("Y-m-d H:i:s");
+		}
+		$data = array(
+			'dt_from' => $_POST['dt_from'],
+			'dt_manual' => $dt_manual,
+			'sermontype_from' => $_POST['sermontype_from'],
+			'sermontype_manual' => (empty($_POST['sermontype_manual']) ? null : $_POST['sermontype_manual']),
+			'pastor_from' => $_POST['pastor_from'],
+			'pastor_manual' => (empty($_POST['pastor_manual']) ? null : $_POST['pastor_manual']),
+			'description_from' => $_POST['description_from'],
+			'description_manual' => (empty($_POST['description_manual']) ? null : $_POST['description_manual']),
+			'include' => (empty($_POST['include']) ? 0 : 1),
+			'protected' => (empty($_POST['protected']) ? 0 : 1)
+		);
+		// data checks
+		if($data['dt_from'] == 'manual' && empty($data['dt_manual'])){
+			returnIt(false, __('An incorrect manual date is entered.', 'sermons-nl'));
+		}
+		if($event_id > 0){
+			if(!($event = sermonsNL_event::get_by_id($event_id))){
+				returnIt(false, sprintf(__('Failed to save event settings: no event with id %d found.', 'sermons-nl'), $event_id));
+			}
+			$items = $event->get_all_items();
+			// check that the manual date is not out of range of the items, if there are any
+			if($data['dt_from'] == 'manual' && !empty($items)){
+				// rely on dt_min and dt_max for ease
+				if($data['dt_manual'] < $event->dt_min || $data['dt_manual'] > $event->dt_max){
+					returnIt(false, __('The manual date and time should not be out of the range of the linked items.', 'sermons-nl'));
+				}
+			}elseif($data['dt_from'] != 'manual' && empty($items)){
+				returnIt(false, __('A manual date must be set when the event has no linked items.', 'sermons-nl'));
+			}
+		}else{
+			// check that date is manual, it has to be manual for new events!
+			if($data['dt_from'] != 'manual'){
+				returnIt(false, __('When adding a new event, the date and time has to be set manually.'));
+			}
+			$event = sermonsNL_event::add_record($data['dt_manual']);
+			if(!$event){
+				returnIt(false, __('Sorry, failed to create a new event due to an unknown error.', 'sermons-nl'));
+			}
+		}
+		// save data
+		$event->update($data);
+		returnIt(true);
 	}
 	
 	public static function link_item_to_event(){
@@ -881,13 +1050,20 @@ class sermonsNL{
 		$kg_video_stream_id = get_option('sermonsNL_kerkdienstgemist_videostreamid');
 		$yt_channel = get_option('sermonsNL_youtube_channel');
 		$yt_key = get_option('sermonsNL_youtube_key');
+		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
 
 		// return settings form
 		print '
 		<div class="sermonsNL_settings">
-			<h2>' . __("Settings for church services") . '</h2>
-			<form method="post" action="options.php">';
-		settings_fields('sermonsNL_options_group'); 
+			<h2>
+				' . __("Settings for church services", 'sermons-nl') . '
+				<img src="' . plugin_dir_url(__FILE__) . 'img/waiting.gif" id="sermonsnl_waiting"/><!-- icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ -->
+			</h2>
+			<div id="sermonsnl_config_save_msg"></div>';
+		print '
+			<form method="post" onsubmit="sermonsnl_admin.config_submit(this); return false;">
+				<input type="hidden" name="_wpnonce" value="' . wp_create_nonce('sermonsnl-administration') . '"/>
+				<input type="hidden" name="action" value="sermonsnl_config_submit"/>';
 		//  class="wp-list-table widefat fixed striped pages"
 		print '
 				<table>
@@ -897,28 +1073,30 @@ class sermonsNL{
 							<th colspan="2">Kerktijden.nl</th>
 						</tr>
 						<tr class="always_visible">
-						    <td colspan="2"><input type="checkbox"' . ($kt_id ? ' checked="checked"' : '') . ' id="kerktijden_checkbox" onclick="sermonsnl_admin.toggle_kerktijden(this);"/><label for="kerktijden_checkbox">' . __("Enable Kerktijden","sermons-nl") . '</label></td>
+						    <td colspan="2"><input type="checkbox"' . ($kt_id ? ' checked="checked"' : '') . ' id="kerktijden_checkbox" onclick="sermonsnl_admin.toggle_kerktijden(this);"/><label for="kerktijden_checkbox">' . sprintf(__("Enable %s","sermons-nl"), "Kerktijden") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
-						    <td colspan="2">' . __("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.", "sermons-nl") . '</td>
+						    <td colspan="2">' . __("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible_setting">
 							<td>' . __("Kerktijden identifier", "sermons-nl") . ': 
 								<div class="help">
-									<figure><img src="' . plugin_dir_url(__FILE__) . 'img/kt_identifier.jpg"/><figcaption>' . __("Browser to our church's page on","sermons-nl") . ' <a href="https://www.kerktijden.nl" target="_blank">www.kerktijden.nl</a> ' . __("and copy the number from the url, e.g. 999 in this figure.", "sermons-nl") . '</figcaption></figure>
+									<figure><img src="' . plugin_dir_url(__FILE__) . 'img/kt_identifier.jpg"/><figcaption>' .
+									sprintf(__("Browse to your church's page on %s and copy the number from the url, e.g. 999 in this figure.", "sermons-nl"), '<a href="https://www.kerktijden.nl" target="_blank">www.kerktijden.nl</a>') .
+									'</figcaption></figure>
 								</div>
 							</td>
 							<td><input type="text" name="sermonsNL_kerktijden_id" id="input_kerktijden_id" value="'. ($kt_id ? $kt_id : '') . '"/></td>
 						</tr>
 						<tr class="collapsible_setting">
 						    <td>' . __("Number of weeks back","sermons-nl") . ':
-						        <div class="help"><div>' . __("How many weeks to look back when loading the kerktijden archive","sermons-nl") . '</div></div>
+						        <div class="help"><div>' . sprintf(__("How many weeks to look back when loading the %s archive","sermons-nl"), "Kerktijden") . '</div></div>
 						    </td>
 						    <td><input type="text" name="sermonsNL_kerktijden_weeksback" value="'. ($kt_weeksback ? $kt_weeksback : '') . '""/></td>
 						</tr>
 						<tr class="collapsible_setting">
 							<td>' . __("Number of weeks ahead","sermons-nl") . ':
-								<div class="help"><div>' . __("How many weeks ahead in time to load kerktijden data","sermons-nl") . '</div></div>
+								<div class="help"><div>' . sprintf(__("How many weeks ahead in time to load %s data","sermons-nl"), "Kerktijden") . '</div></div>
 							</td>
 							<td><input type="text" name="sermonsNL_kerktijden_weeksahead" value="'. ($kt_weeksahead ? $kt_weeksahead : '') . '""/></td>
 						</tr>
@@ -929,27 +1107,29 @@ class sermonsNL{
 							<th colspan="2">Kerkomroep.nl</th>
 						</tr>
 						<tr class="always_visible">
-						    <td colspan="2"><input type="checkbox"' . ($ko_mp ? ' checked="checked"' : '') . ' id="kerkomroep_checkbox" onclick="sermonsnl_admin.toggle_kerkomroep(this);"/><label for="kerkomroep_checkbox">' . __("Enable Kerkomroep","sermons-nl") . '</label></td>
+						    <td colspan="2"><input type="checkbox"' . ($ko_mp ? ' checked="checked"' : '') . ' id="kerkomroep_checkbox" onclick="sermonsnl_admin.toggle_kerkomroep(this);"/><label for="kerkomroep_checkbox">' . sprintf(__("Enable %s","sermons-nl"), "Kerkomroep") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
-						    <td colspan="2">' . __("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.", "sermons-nl") . '</td>
+						    <td colspan="2">' . __("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible_setting">
 							<td>' . __("Mount point", "sermons-nl") . ':
 								<div class="help">
-									<figure><img src="' . plugin_dir_url(__FILE__) . 'img/ko_url.jpg"/><figcaption>' . __("Browse to your church's page on","sermons-nl") . ' <a href="https://www.kerkomroep.nl" target="_blank">kerkomroep.nl</a> ' . __("and copy the number from the end of the url, e.g. 99999 in this figure.") . '</figcaption></figure>
+									<figure><img src="' . plugin_dir_url(__FILE__) . 'img/ko_url.jpg"/><figcaption>' . sprintf(__("Browse to your church's page on %s and copy the number from the end of the url, e.g. 99999 in this figure.", 'sermons-nl'), '<a href="https://www.kerkomroep.nl" target="_blank">kerkomroep.nl</a>') . '</figcaption></figure>
 								</div>
 							</td>
 							<td><input type="text" name="sermonsNL_kerkomroep_mountpoint" id="input_kerkomroep_id" value="' . ($ko_mp ? $ko_mp : '') . '"/></td>
 						</tr>
-					</tbody>
-					
+					</tbody>';
+
+		/*
+		print '
                     <tbody id="kerkdienstgemist_settings"' . ($kg_rss_id ? '' : ' class="settings_disabled"') . '>
 						<tr>
 							<th colspan="2">Kerkdienstgemist.nl</th>
 						</tr>
 						<tr class="always_visible">
-						    <td colspan="2"><input type="checkbox"' . ($kg_rss_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermonsnl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">' . __("Enable Kerkdienst gemist","sermons-nl") . '</label></td>
+						    <td colspan="2"><input type="checkbox"' . ($kg_rss_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermonsnl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">' . sprintf(__("Enable %s","sermons-nl"),"Kerkdienst gemist") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
 						    <td colspan="2">' . __("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.", "sermons-nl") . '</td>
@@ -1000,14 +1180,15 @@ class sermonsNL{
 							</td>
 							<td><input type="text" name="sermonsNL_kerkdienstgemist_videostreamid" value="' . ($kg_video_stream_id ? $kg_video_stream_id : '') . '"/></td>
 						</tr>
-                    </tbody>
-                    
+                    </tbody>';
+		*/
+		print '
                     <tbody id="youtube_settings"' . ($yt_channel ? '' : ' class="settings_disabled"') . '>
 						<tr>
 							<th colspan="2">YouTube.com</th>
 						</tr>
 						<tr class="always_visible">
-						    <td colspan="2"><input type="checkbox"' . ($yt_channel ? ' checked="checked"' : '') . ' id="youtube_checkbox" onclick="sermonsnl_admin.toggle_youtube(this);"/><label for="youtube_checkbox">' . __("Enable YouTube","sermons-nl") . '</label></td>
+						    <td colspan="2"><input type="checkbox"' . ($yt_channel ? ' checked="checked"' : '') . ' id="youtube_checkbox" onclick="sermonsnl_admin.toggle_youtube(this);"/><label for="youtube_checkbox">' . sprintf(__("Enable %s","sermons-nl"),"YouTube") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
 						    <td colspan="2">' . __("Setting the channel may take a while depending on the number of available videos.", "sermons-nl") . '</td>
@@ -1015,7 +1196,7 @@ class sermonsNL{
 						<tr class="collapsible_setting">
 							<td>YouTube channel ID: 
 								<div class="help">
-									<figure><img src="' . plugin_dir_url(__FILE__) . '/img/yt_channel.jpg"/><figcaption>Browse to your church\'s YouTube channel and copy the youtube channel ID from the url.</figcaption></figure>
+									<figure><img src="' . plugin_dir_url(__FILE__) . '/img/yt_channel.jpg"/><figcaption>' . __("Browse to your church's YouTube channel and copy the youtube channel ID from the url.","sermons-nl") . '</figcaption></figure>
 								</div>
 							</td>
 							<td><input type="text" name="sermonsNL_youtube_channel" id="input_youtube_id" value="' . $yt_channel . '"/></td>
@@ -1023,10 +1204,16 @@ class sermonsNL{
 						<tr class="collapsible_setting">
 							<td>YouTube api key: 
 								<div class="help">
-									<div>Visit <a href="https://developers.google.com/youtube/v3/getting-started" target="_blank">https://developers.google.com/youtube/v3/getting-started</a> to learn how to obtain a YouTube api key.</div>
+									<div>' . sprintf(__('Visit %s to learn how to obtain a YouTube api key.','sermons-nl'),'<a href="https://developers.google.com/youtube/v3/getting-started" target="_blank">https://developers.google.com/youtube/v3/getting-started</a>') . '</div>
 								</div>
 							</td>
 							<td><input type="text" name="sermonsNL_youtube_key" value="' . $yt_key . '"/></td>
+						</tr>
+						<tr class="collapsible_setting">
+							<td>' . __("Number of weeks back","sermons-nl") . ':
+								<div class="help"><div>' . sprintf(__("How many weeks to look back when loading the %s archive","sermons-nl"), "YouTube") . '</div></div>
+							</td>
+							<td><input type="text" name="sermonsNL_youtube_weeksback" value="'. ($yt_weeksback ? $yt_weeksback : '') . '""/></td>
 						</tr>
 					</tbody>
 				</table>';
@@ -1034,6 +1221,93 @@ class sermonsNL{
 		print '
 			</form>
 		</div>';
+	}
+
+	// if an option is changed, in some cases one of the tables needs to be truncated
+	// and sometimes a specific archive need to be loaded
+	public static function config_submit(){
+		// check access
+		if(!current_user_can(self::$capability)){
+			wp_die("No permission");
+		}
+		// check nonce
+		check_ajax_referer('sermonsnl-administration');
+		// may be needed
+		global $wpdb;
+		// loop through const OPTION_NAMES: if name is found in _POST, it can be saved.
+		// check for some if they changed, if so an action is required
+		$get_data = array();
+		foreach(self::OPTION_NAMES as $option_name => $attr){
+			if(array_key_exists($option_name, $_POST)){
+				$old_value = get_option($option_name);
+				$new_value = $_POST[$option_name];
+				if($attr['default'] === null && $new_value === ""){
+					$new_value = null;
+				}elseif($attr['type'] == 'integer'){
+					$new_value = (int)$new_value;
+				}
+				if($old_value != $new_value){
+					update_option($option_name, $new_value);
+					switch($option_name){
+						case "sermonsNL_kerktijden_id":
+							// clean kerktijden data when the kerktijden_id changes
+							$wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_kerktijden");
+							if(!empty($new_value)){
+								$get_data[] = 'kt';
+							}
+							break;
+						case "sermonsNL_kerktijden_weeksback":
+							if($new_value > $old_value){
+								$get_data[] = 'kt';
+							}
+							break;
+						case "sermonsNL_kerktijden_weeksahead":
+							if($old_value > $old_value){
+								$get_data[] = 'kt';
+							}
+							break;
+						case "sermonsNL_kerkomroep_mountpoint":
+							// clean kerkomroep data when the mountpoint changes
+							$wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_kerkomroep");
+							if(!empty($new_value)){
+								$get_data[] = 'ko';
+							}
+							break;
+						case "sermonsNL_youtube_channel":
+							// clean youtube data when the channel id changes
+							$wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_youtube");
+							if(!empty($new_value)){
+								$get_data[] = 'yt';
+							}
+							break;
+						case "sermonsNL_youtube_key":
+							if(!empty($new_value)){
+								// it is uncertain whether this is needed, but if the initial yt key was wrong
+								// and is now corrected, updating the key needs to trigger loading the archive.
+								$get_data[] = 'yt';
+							}
+							break;
+						case "sermonsNL_youtube_weeksback":
+							if($new_value > $old_value){
+								$get_data[] = 'yt';
+							}
+							break;
+					}
+				}
+			}
+		}
+		$msg = __('Successfully saved. ', 'sermons-nl') .
+			(empty($get_data) ? "" : __('It may take some seconds before new data are loaded from the different archives. If data doesn\'t load as expected, check the log first.','sermons-nl'));
+		// return success
+		$json = array(
+			'ok' => true,
+			'action' => 'sermonsnl_config_submit',
+			'sucMsg' => $msg,
+			'resources' => implode(',', array_unique($get_data)),
+			'nonce' => wp_create_nonce('sermonsnl-background-action')
+		);
+		print json_encode($json);
+		wp_die();
 	}
 	
 	public static function admin_view_log_page(){
@@ -1043,70 +1317,45 @@ class sermonsNL{
 		}
 
         print '<div>
-        <h2>SermonsNL '.__('Log','sermons-nl').'</h2>
-        <p>' . __('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions.') . '</p>
+        <h2>SermonsNL '.__('Log page','sermons-nl').'</h2>
+        <p>' . sprintf(__('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions from the past %d days.','sermons-nl'), self::LOG_RETENTION_DAYS) . '</p>
         ';
+		global $wpdb;
+		$log = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_log ORDER BY id DESC");
         
-	    $log = file(plugin_dir_path(__FILE__) . 'log.log');
 	    if(empty($log)){
-	        print '<p>' . __('There are no logged messages available.') . '</p>';
+	        print '<p>' . __('There are no logged messages available.','sermons-nl') . '</p>';
 	    }else{
-	        $log = array_reverse($log);
 	        print '<p class="sermonsnl-log">';
-	        $n = count($log);
-    	    foreach($log as $r => $line){
-    	        print '<span>' . ($n-$r) . ':</span> ' . esc_html($line) . '<br/>';
+	        foreach($log as $r => $line){
+				$dt = (new DateTime($line->dt, self::$timezone_db))->setTimeZone(wp_timezone())->format("Y-m-d H:i:s");
+				print '<span>' . ($r) . ':</span> ' . $dt . ' (' . esc_html($line->fun) . ') ' . esc_html($line->log). '<br/>';
     	    }
     	    print '</p>';
 	    }
-	    print '
-	    <p>' . __('End of log file.') . '</p>';
-
 	}
 	
-	public static function admin_test_page(){
-	    // check permission
-		if(!current_user_can(self::$capability)){
-			wp_die("No permission");
-		}
-
-	    self::kerktijden_scripts();
-	    self::kerkomroep_scripts();
-	    self::youtube_scripts();
-	    
-	    print '<p>Show events with issues:</p><p>';
-        $rec = self::get_events_with_issues();
-        foreach($rec as $event){
-            print '#' . $event->id . ' (nrec='.$event->n_rec.')<br/>';
-        }
-        print 'EOF</p>';
-        
-        print get_locale();
-
-	}
-
     // UPDATE FUNCTIONS HANDLED BY CRON JOBS
     
-    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old sermons if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare recourses
+    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old sermons if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
     public static function update_daily(){
         // kerktijden: update the archive
         if(get_option('sermonsNL_kerktijden_id')){
             self::log('update_daily', 'updating kerktijden (backward + pastors)');
-            self::kerktijden_scripts();
             sermonsNL_kerktijden::get_remote_data_backward();
             sermonsNL_kerktijdenpastors::get_remote_data();
         }
         // kerkomroep: update the archive and check whether all items are present
         if(get_option('sermonsNL_kerkomroep_mountpoint')){
             self::log('update_daily', 'updating kerkoproep (all + url validation)');
-            self::kerkomroep_scripts();
-            sermonsNL_kerkomroep::get_remote_data();
-            sermonsNL_kerkomroep::validate_remote_urls();
+            $ok = sermonsNL_kerkomroep::get_remote_data();
+			if(false !== $ok){
+				sermonsNL_kerkomroep::validate_remote_urls();
+			}
         }
         // youtube: update the entire archive, don't search for new items
         if(get_option('sermonsNL_youtube_channel')){
             self::log('update_daily', 'updating youtube (update all known records)');
-            self::youtube_scripts();
             sermonsNL_youtube::get_remote_update_all();
         }
         // delete events that have become redundant
@@ -1116,6 +1365,9 @@ class sermonsNL{
             $event = sermonsNL_event::get_by_id($e->id);
             $event->delete();
         }
+        // delete log items >LOG_RETENTION_DAYS days old
+        global $wpdb;
+		$wpdb->query("DELETE FROM {$wpdb->prefix}sermonsNL_log WHERE DATEDIFF(CURDATE(),dt) > ".self::LOG_RETENTION_DAYS.";");
         self::log('update_daily', 'done');
         return true;
     }
@@ -1125,19 +1377,16 @@ class sermonsNL{
         // kerktijden
         if(get_option('sermonsNL_kerktijden_id')){
             self::log('update_quarterly', 'updating kerktijden (forward)');
-            self::kerktijden_scripts();
             sermonsNL_kerktijden::get_remote_data_forward();
         }
         // kerkomroep
         if(get_option('sermonsNL_kerkomroep_mountpoint')){
             self::log('update_quarterly','updating kerkomroep (all)');
-            self::kerkomroep_scripts();
             sermonsNL_kerkomroep::get_remote_data();
         }
         // youtube: get recent ones. it will include new planned broadcasts, new live broadcases, and update recent items
         if(get_option('sermonsNL_youtube_channel')){
             self::log('update_quarterly','updating youtube (last 10)');
-            self::youtube_scripts();
             sermonsNL_youtube::get_remote_data(10);
         }
         self::log('update_quarterly', 'done');
@@ -1148,19 +1397,13 @@ class sermonsNL{
     
     // only checks for live broadcasts. in case of youtube it only does so when a sermon is close to start
     private static function update_now(){
-        $file_last_update_now_time = plugin_dir_path(__FILE__) . "last_update_now.time";
-        if(file_exists($file_last_update_now_time)){
-            $last_update_now_time = file_get_contents($file_last_update_now_time);
-        }else{
-            $last_update_now_time = 0;
-        }
-         // first check if the last check was >60 seconds ago. to avoid running out of quota for the youtube api.
+        $last_update_now_time = get_option("sermonsNL_last_update_time", 0);
+		// first check if the last check was >60 seconds ago. to avoid running out of quota for the youtube api.
         // perhaps the interval will be a setting later
         if(time() - $last_update_now_time >= 60){
-            file_put_contents($file_last_update_now_time, time());
+            update_option('sermonsNL_last_update_time', time(), false);
             if(get_option('sermonsNL_kerkomroep_mountpoint')){
                 self::log('update_now', 'updating kerkomroep (most recent record)');
-                self::kerkomroep_scripts();
                 // checking only the first records is reasonably fast (<0.05 sec) so we can do it during page load
                 sermonsNL_kerkomroep::get_remote_data(true);
             }
@@ -1174,7 +1417,6 @@ class sermonsNL{
                     if($item->yt_live || ($item->yt_planned && $time_to < 1800 && $time_to > -3600 && !$item->yt_dt_actual)){
                         // update the last items. 
                         // live and planned ones should be on top of the list, so we only need those planned + 1 that may be live
-                        self::youtube_scripts();
                         $planned = sermonsNL_youtube::get_planned(true); 
                         $n = count($planned) + 1;
                         self::log('update_now', 'updating youtube (last '.$n.')');
@@ -1186,19 +1428,22 @@ class sermonsNL{
             self::log('update_now', 'done');
 
         }
+        return true;
     }
 
     // SITE FUNCTIONS
     
+
     // shortcode function to list sermons
     public static function html_sermons_list(array $atts=[], ?string $content=null){
         // default attributes
 		$atts = shortcode_atts( array(
-			'offset' => null, /* date string for the first record to be included in the initial view, e.g. "now -14 days". At least one of the parameters offset or ending should be provided*/
-			'ending' => null, /* date string for the last record to be included in the initial view, e.g. "now +14 days". */
-			'count' => 10, /* The number of items to show. This is ignored if both parameters offset and ending are provided. */
-			'more-buttons' => 1, /* whether to include the show-more buttons; set to 0 to remove these buttons */
-			'datefmt' => 'long' /* either "long" (weekday and month written out) or "short" (abbreviated day and numeric month) or a valid date format for the php date function */
+			'offset' => null, // date string for the first record to be included in the initial view, e.g. "now -14 days". At least one of the parameters offset or ending should be provided
+			'ending' => null, // date string for the last record to be included in the initial view, e.g. "now +14 days".
+			'count' => 10, // The number of items to show. This is ignored if both parameters offset and ending are provided.
+			'datefmt' => 'long', // either "long" (weekday and month written out) or "short" (abbreviated day and numeric month) or a valid date format for the php date function
+			'more-buttons' => 1, // whether to include the show-more buttons; set to 0 to remove these buttons
+			'sermonsnl-logo' => 1 // whether to display the plugin logo; set to 0 to remove the logo. Note that other logos are obligatory.
 		), $atts);
 		
 		$get_date = function($d){
@@ -1215,14 +1460,13 @@ class sermonsNL{
 		$dt1 = $get_date($atts['offset']);
 		$dt2 = $get_date($atts['ending']);
 		$count = (int) $atts['count'];
-		$checkInterval = 30; /* check each x seconds with javascript query; this might become a setting later */
 		$datefmt = esc_html((string)$atts['datefmt']);
 		$morebuttons = (int)$atts['more-buttons'];
 
-		if($atts['offset'] !== null && !$dt1) return __("Error: Parameter `offset` is an invalid date string in the shortcode.");
-		if($atts['ending'] !== null && !$dt2) return __("Error: Parameter `ending` is an invalid date string in the shortcode.");
-		if(!$dt1 && !$dt2) return __("Error: At least one of the parameters `offset` and/or `ending` should be provided in the shortcode.");
-		if((!$count || $count <= 0) && (!$dt1 || !$dt2)) return __("Error: If one of the parameters `offset` or `ending` is not provided in the shortcode, parameter `count` should be a positive number.");
+		if($atts['offset'] !== null && !$dt1) return __("Error: Parameter `offset` is an invalid date string in the shortcode.",'sermons-nl');
+		if($atts['ending'] !== null && !$dt2) return __("Error: Parameter `ending` is an invalid date string in the shortcode.",'sermons-nl');
+		if(!$dt1 && !$dt2) return __("Error: At least one of the parameters `offset` and/or `ending` should be provided in the shortcode.",'sermons-nl');
+		if((!$count || $count <= 0) && (!$dt1 || !$dt2)) return __("Error: If one of the parameters `offset` or `ending` is not provided in the shortcode, parameter `count` should be a positive number.",'sermons-nl');
 		
 		// check new live broadcasts
 		self::update_now();
@@ -1258,12 +1502,8 @@ class sermonsNL{
 		}
 	
 		// ready to build html
-        $html = '<script type="text/javascript">
-        sermonsnl.count = ' . $count . ';
-		sermonsnl.datefmt = "' . $datefmt . '";
-		sermonsnl.admin_url = "' . admin_url( 'admin-ajax.php') . '";
-		sermonsnl.check_interval = ' . $checkInterval . ';
-		</script>';
+        $html = '
+		<div>';
 		
 		if($morebuttons){ 
 		    // check if there are earlier sermons
@@ -1277,13 +1517,13 @@ class sermonsNL{
 		        if($num_rec) $showit = true;
 		    }
 		    if($showit){
-    			$html .= '<div><a href="javascript:;" id="sermonsnl_more_up" onclick="sermonsnl.showmore(\'up\');">' . __("Load earlier sermons") . '</a></div>';
+    			$html .= '<div><a href="javascript:;" id="sermonsnl_more_up" onclick="sermonsnl.showmore(\'up\', \''.$datefmt.'\');">' . __("Load earlier sermons", 'sermons-nl') . '</a></div>';
 		    }
 		}
 
 		$html .= '<ul id="sermonsnl_list">';
 		
-		$html .= self::html_list_items($data, $count, (string)$atts['datefmt']);
+		$html .= self::html_list_items($data, $count, $datefmt, false);
 	
 		$html .= '</ul>';
 
@@ -1299,76 +1539,140 @@ class sermonsNL{
 		        if($num_rec) $showit = true;
 		    }
 		    if($showit){
-    			$html .= '<div><a href="javascript:;" id="sermonsnl_more_down" onclick="sermonsnl.showmore(\'down\');">' . __("Load later sermons") . '</a></div>';
+    			$html .= '
+    			<div>
+					<a href="javascript:;" id="sermonsnl_more_down" onclick="sermonsnl.showmore(\'down\',\''.$datefmt.'\');">' . __("Load later sermons", 'sermons-nl') . '</a>
+				</div>';
 		    }
 		}
 		
-		// add logos
-		$logos = array();
-		if(($kt_id = get_option("sermonsnl_kerktijden_id"))) $logos["Kerktijden.nl"] = array("url" => "https://www.kerktijden.nl/gemeente/$kt_id/", "img" => "logo_kerktijden.svg");
-		if(($ko_mp = get_option("sermonsnl_kerkomroep_mountpoint"))) $logos["Kerkomroep.nl"] = array("url" => "https://www.kerkomroep.nl/#/kerken/$ko_mp", "img" => "logo_kerkomroep.png");
-		if(($yt_ch = get_option("sermonsnl_youtube_channel"))) $logos["YouTube.com"] = array("url" => "https://www.youtube.com/channel/$yt_ch", "img" => "logo_youtube.jpg");
-		$html .= '<div class="sermonsnl-logos">';
-		foreach($logos as $name => $link){
-		    $html .= '<a href="' . $link["url"] . '" target="_blank" title="'.$name.'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '" alt="' . $name . '"/></a>';
-		}
-		$html .= '<img src="' . plugin_dir_url(__FILE__) . 'img/logo_sermonsnl_' . (get_locale() == 'nl_NL' ? 'NL' : 'EN') . '.png" alt="Sermons-NL: ' . __("bring Dutch church services to your site") . '"/>';
-		$html .= '</div>';
+		// add logos to general source pages
+		$html .= self::add_logos(
+			get_option("sermonsNL_kerktijden_id"),
+			get_option("sermonsNL_kerkomroep_mountpoint"),
+			null,
+			get_option("sermonsNL_youtube_channel"),
+			$atts['sermonsnl-logo'] != 0
+		);
+
+		$html .= '
+			</div>';
 
         return $html;
     }
-    
+
+    private static function add_logos(?int $kt_id, ?int $ko_mp, ?string $yt_vid, ?string $yt_ch, bool $plugin_logo=false, bool $div_embed=true){
+		$html = '';
+		$logos = array();
+		if($kt_id){
+			$logos[] = array("url" => "https://www.kerktijden.nl/gemeente/$kt_id/", "img" => "logo_kerktijden.svg", "txt" => sprintf(__("Open the %s website","sermons-nl"), "Kerktijden"));
+		}
+		if($ko_mp){
+			$logos[] = array("url" => "https://www.kerkomroep.nl/kerken/$ko_mp", "img" => "logo_kerkomroep.png", "txt" => sprintf(__("Open the %s website","sermons-nl"), "Kerkomroep"));
+		}
+		if(($yt_vid)){
+			$logos[] = array("url" => "https://www.youtube.com/watch?v=$yt_vid", "img" => "logo_youtube.jpg", "txt" => __("Watch this video on YouTube","sermons-nl"));
+		}
+		if($yt_ch){
+			$logos[] = array("url" => "https://www.youtube.com/channel/$yt_ch", "img" => "logo_youtube.jpg", "txt" => __("Open the YouTube channel","sermons-nl"));
+		}
+		$html .= '
+				<' . ($div_embed ? 'div':'span') . ' class="sermonsnl-logos">
+					' . __("Source:", "sermons-nl") . '<br/>';
+		foreach($logos as $link){
+			$html .= '
+					<a href="' . $link["url"] . '" target="_blank" title="'.$link["txt"].'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '" alt="' . $link["txt"] . '"/></a>';
+		}
+		if($plugin_logo){
+			$html .= '
+					<a href="'.self::PLUGIN_URL.'" target="_blank" title="' . __("Find out more about the Sermons-NL plugin","sermons-nl") . '"><img src="' . plugin_dir_url(__FILE__) . 'img/logo_sermonsnl_' . (get_locale() == 'nl_NL' ? 'NL' : 'EN') . '.png" alt="' . __("Sermons-NL logo","sermons-nl") . '"/></a>';
+		}
+		$html .= '
+				</' . ($div_embed ? 'div':'span') . '>';
+		return $html;
+	}
+
 	// ajax server handler to check current status of live broadcasts and new live broadcasts
 	public static function check_status(){
 	    
-	    // tmp for testing
-	    /*
-	    global $wpdb;
-	    $ran = rand(0,2);
-	    $live = $planned = 0;
-	    if($ran == 1) $live = 1;
-	    if($ran == 2) $planned = 1;
-	    $wpdb->query("UPDATE `wp_sermonsNL_youtube` SET `planned` = $planned, `live` = $live WHERE `wp_sermonsNL_youtube`.`id` = 1;");
-	    */
-	   
-	    // end tmp
 		ob_clean();
 		
 		// check new live broadcasts
 		self::update_now();
 		
+		// which to update
+		$check_list = (int)$_GET['check_list'];
+		$check_lone = (int)$_GET['check_lone'];
+
 		// get data
-		$event_ids = array();
+		$items = array();
+		$events = array();
         if(!empty($_GET['live'])){
             foreach($_GET['live'] as $id_str){
-                preg_match_all("/^sermonsnl_([a-z]+)_(audio_|video_|)([0-9]+)$/", $id_str, $matches);
+                preg_match_all("/^sermonsnl_([a-z]+)_(audio_|video_|)([0-9]+)(_lone|)$/", $id_str, $matches);
                 $type = $matches[1][0];
                 $id = $matches[3][0];
-                $item = self::get_item_by_type($type, $id);
-                $event_ids[] = $item->event_id;
+				$item = self::get_item_by_type($type, $id);
+                $items[] = $item;
+				//if($check_list && $matches[4][0] == '' && $item->event_id){
+				//	$event_ids[] = $item->event_id;
+				//}
             }
         }
-        $server_live = self::get_complete_records_by_live();
-        foreach($server_live as $event){
-            $event_ids[] = $event->id;
-        }
-        $events = self::get_complete_records_by_ids(array_unique($event_ids));
-        
-        // get html of all selected events
+        $yt_live = sermonsNL_youtube::get_live();
+		if($yt_live !== null){
+			$items[] = $yt_live;
+		}
+		$ko_live = sermonsNL_kerkomroep::get_live();
+		if($ko_live !== null){
+			$items[] = $ko_live;
+		}
+
+		$items = array_unique($items, SORT_REGULAR);
+
+		foreach($items as $item){
+			if($item->event_id && array_search($item->event, $events) === false) $events[] = $item->event;
+		}
+
+		// get html of all selected events
 		$json = array(
-		    'call' => "sermonsnl_checkstatus",
-		    'count' => count($events),
-		    'events' => array()
+			'call' => "sermonsnl_checkstatus",
+			'events_list' => (count($events) > 0 && $check_list ? array() : null),
+			'events_lone' => (count($events) > 0 && $check_lone ? array() : null),
+			'items_lone' => (count($items) > 0 && $check_lone ? array() : null)
 		);
-		
-		foreach($events as $event){
-		    $event_obj = sermonsNL_event::get_by_id($event->id);
-		    $json['events'][] = array(
-		        'id' => 'sermonsnl_event_'.$event->id, 
-		        'html' => self::html_event_links($event),
-		        'audio_class' => 'sermonsnl-av' . ($event_obj->has_audio ? ' sermonsnl-audio' . ($event_obj->audio_live ? '-live' : '') : ''),
-		        'video_class' => 'sermonsnl-av' . ($event_obj->has_video ? ' sermonsnl-video' . ($event_obj->video_live ? '-live' : ($event_obj->video_planned ? '-planned' : '')) : '')
-		    );
+		if($check_lone){
+			foreach($events as $event){
+				$json['events_lone'][] = array(
+					'id' => 'sermonsnl_event_'.$event->id.'_lone_links',
+					'html' => self::html_event_links($event, true)
+				);
+			}
+			foreach($items as $item){
+				$id = 'sermonsnl_item_'.$item->type.'_'.$item->id.'_lone';
+				switch($item->type){
+					case 'youtube':
+						$html = self::html_yt_video_link($item, true);
+						break;
+					case 'kerkomroep':
+						$html = self::html_ko_audio_video_link($item, true);
+						break;
+				}
+				$json['items_lone'][] = array(
+					'id' => $id,
+					'html' => $html
+				);
+			}
+		}
+		if($check_list){
+			foreach($events as $event){
+				$json['events_list'][] = array(
+					'id' => 'sermonsnl_event_'.$event->id.'_links',
+					'html' => self::html_event_links($event, false),
+					'audio_class' => self::css_audio_class($event),
+					'video_class' => self::css_video_class($event)
+				);
+			}
 		}
 		print json_encode($json);
 		wp_die();
@@ -1378,14 +1682,13 @@ class sermonsNL{
 	public static function show_more(){
 		ob_clean();
 		$json = array('call' => "sermonsnl_showmore");
-		if(!isset($_GET['direction']) || !isset($_GET['count']) || !isset($_GET['current'])){
+		if(!isset($_GET['direction']) || !isset($_GET['current'])){
 		    $json["error"] = "insufficient parameters provided";
 		}else{
     		$datefmt = (empty($_GET['datefmt']) ? 'long' : (string)$_GET['datefmt']);
     		$direction = (string) $_GET['direction'];
     		$json['direction'] = $direction;
-    		$count = (int) $_GET['count']; 
-    		if(!($count > 0)) $count = 10;
+    		$count = 10; // fixed (optional to make setting later)
     		$json['current'] = $_GET['current'];
     		$current = (int) str_replace("sermonsnl_event_", "", $_GET['current']);
     		$cur_item = self::get_complete_records_by_ids($current);
@@ -1419,8 +1722,39 @@ class sermonsNL{
 		wp_die();
 	}
 
+	private static function css_audio_class($event){
+		if($event instanceof sermonsNL_event){
+			$item = $event->kerkomroep;
+			$url = ($item ? $item->audio_url : null);
+			$live = ($item ? $item->live : null);
+		}else{
+			$url = $event->ko_audio_url;
+			$live = $event->ko_live;
+		}
+		return 'sermonsnl-av' . ($url ? ' sermonsnl-audio' . ($live ? '-live' : '') : '');
+	}
+
+	private static function css_video_class($event){
+		if($event instanceof sermonsNL_event){
+			$ko = $event->kerkomroep;
+			$ko_url = ($ko ? $ko->video_url : null);
+			$ko_live = ($ko && $ko_url ? $ko->live : null);
+			$yt = $event->youtube;
+			$yt_live = ($yt ? $yt->live : null);
+			$yt_planned = ($yt ? $yt->planned : null);
+
+		}else{
+			$ko_url = $event->ko_video_url;
+			$ko_live = $ko_url && $event->ko_live;
+			$yt = $event->yt_video_id;
+			$yt_live = $event->yt_live;
+			$yt_planned = $event->yt_planned;
+		}
+		return 'sermonsnl-av' . ($yt || $ko_url ? ' sermonsnl-video' . ($yt_live || $ko_live ? '-live' : ($yt_planned ? '-planned' : '')) : '');
+	}
+
     // html list items - function used by above site functions
-	private static function html_list_items(array $data, int $count, string $datefmt){
+	private static function html_list_items(array $data, int $count, string $datefmt, bool $standalone=false){
 		if($count > 0){
 		    $seq = range(0, $count-1);
 		}elseif($count < 0){
@@ -1434,50 +1768,255 @@ class sermonsNL{
 			$dt = $event->dt_start;
 			// to do: check how to deal with cancelled sermons
 			// $cancelled = !empty($event->kt['cancelled']);
-			$html .= '<li id="sermonsnl_event_' . $event->id . '"' . (!empty($event->display_open) ? ' class="sermonsnl-open"' : '') . ' onclick="sermonsnl.toggledetails(this);">';
-			$html .= '<span class="sermonsnl-av' . ($event->ko_audio_url ? ' sermonsnl-audio' . ($event->ko_live ? '-live' : '') : '') . '"></span>';
-			$html .= '<span class="sermonsnl-av' . ($event->yt_video_id || $event->ko_video_url ? ' sermonsnl-video' . ($event->yt_live || ($event->ko_video_url && $event->ko_live) ? '-live' : ($event->yt_planned ? '-planned' : '')) : '') . '"></span>';
-			$html .= '<span class="sermonsnl-dt">' . self::datefmt($datefmt, $event->dt_start) . ' </span><span class="sermonsnl-pastor">' . $event->pastor . ' </span><span class="sermonsnl-type">' . ($event->sermontype == "Reguliere dienst" ? "" : $event->sermontype) . '</span>';
-			$html .= '<div class="sermonsnl-details"><div>';
+			if($standalone){
+				$html .= '<div>';
+			}else{
+				$html .= '<li id="sermonsnl_event_' . $event->id . '"' . (!empty($event->display_open) ? ' class="sermonsnl-open"' : '') . ' onclick="sermonsnl.toggledetails(this);">';
+				$html .= '<span class="'.self::css_audio_class($event).'"></span>';
+				$html .= '<span class="'.self::css_video_class($event).'"></span>';
+			}
+			$html .= '<span class="sermonsnl-dt">' . ucfirst(self::datefmt($datefmt, $event->dt_start)) . ' </span><span class="sermonsnl-pastor">' . $event->pastor . ' </span><span class="sermonsnl-type">' . ($event->sermontype == "Reguliere dienst" ? "" : $event->sermontype) . '</span>';
+			if(!$standalone){
+				$html .= '<div class="sermonsnl-details"><div>';
+			}
 			if(!($event->yt_video_id || $event->ko_id)){
-				$html .= '<p>' . ($event->kt_cancelled ? __('This sermon has been cancelled.') : __('There are no broadcasts for this sermon (yet).')) . '</p>';
+				$html .= ($event->kt_cancelled ? __('This sermon has been cancelled.','sermons-nl') : __('There are no broadcasts for this sermon.','sermons-nl'));
 			}
 			else{
-				$html .= '<div class="sermonsnl-links">';
-				$html .= self::html_event_links($event);
+				$html .= '<div class="sermonsnl-links" id="sermonsnl_event_'.$event->id.($standalone?'_lone':'').'_links">';
+				$html .= self::html_event_links($event, $standalone);
 				$html .= '</div>';
     			$html .= '<div class="sermonsnl-description">' . nl2br(esc_html($event->description)) . '</div>';
 			}
-			$html .= '</div></div></li>';
+			if($standalone){
+				$html .= '</div>';
+			}else{
+				$html .= '</div></div>';
+				$html .= '</li>';
+			}
 		}
 		return $html;
 	}
 	
-	private static function html_event_links($event){
+	// container to save the items that have already been displayed on the page to avoid duplication
+	private static $standalone_items = array();
+
+	// shortcode function to list a single item
+	public static function html_sermons_item(array $atts=[], ?string $content=null){
+		// default attributes
+		$atts = shortcode_atts( array(
+			'type' => null, // either kerkomroep or youtube
+			'id' => null // the item id to be shown
+		), $atts);
+		$item_type = (string)$atts['type'];
+		$item_id = (int)$atts['id'];
+		if(empty($item_type) || false === array_search($item_type, array('kerkomroep','youtube')) || empty($item_id)) return self::INVALID_SHORTCODE_TEXT;
+
+		$item = self::get_item_by_type($item_type, $item_id);
+
+		if(!$item){
+			return self::INVALID_SHORTCODE_TEXT;
+		}
+
+		// protect the page from having twice the same standalone item
+		$item_str = sprintf("%s-%d", $item_type, $item_id);
+		if(false !== array_search($item_str, self::$standalone_items)){
+			return str_replace(']', ': duplication]', self::INVALID_SHORTCODE_TEXT);
+		}
+		self::$standalone_items[] = $item_str;
+
+		$dt = $item->dt;
+		if($dt) $dt = self::datefmt('long',$dt);
+
+		$html = '
+		<div class="sermonsnl_item_lone">
+		<div>
+		<p>' . ucfirst($dt) . ' (';
+		if($item_type == 'kerkomroep'){
+			$html .= esc_html($item->pastor);
+		}elseif($item_type == 'youtube'){
+			$html .= esc_html($item->title);
+		}
+		$html .= ')</p>
+		<div id="sermonsnl_item_'.$item_type.'_'.$item_id.'_lone" class="sermonsnl-links">';
+
+		if($item_type == 'kerkomroep'){
+			$html .= self::html_ko_audio_video_link($item, true);
+		}elseif($item_type == 'youtube'){
+			$html .= self::html_yt_video_link($item, true);
+		}
+
+		$html .= '
+		</div>
+		</div>';
+
+		// add logo
+		$html .= self::add_logos(
+			null,
+			($item_type == 'kerkomroep' ? get_option('sermonsNL_kerkomroep_mountpoint') : null),
+								 ($item_type == 'youtube' ? $item->video_id : null),
+								 null,
+						   false // no plugin logo
+		);
+
+		$html .= '
+		</div>';
+		return $html;
+	}
+
+	// shortcode function to list the items of a single event
+	public static function html_sermons_event(array $atts=[], ?string $content=null){
+		// default attributes
+		// in future perhaps (1) add date format option, currently 'long' by default, (2) add plugin logo option, currently not shown
+		$atts = shortcode_atts( array(
+			'id' => null // the item id to be shown
+		), $atts);
+		$event_id = (int)$atts['id'];
+		if(empty($event_id)) return self::INVALID_SHORTCODE_TEXT;
+
+		$event = self::get_complete_records_by_ids(array($event_id));
+		if(empty($event)){
+			return self::INVALID_SHORTCODE_TEXT;
+		}
+
+		// protect the page from having twice the same standalone item
+		$items = array(
+			'kerktijden' => ($event[0]->kt_id ? sprintf("kerktijden-%d", $event[0]->kt_id) : null),
+					   'kerkomroep' => ($event[0]->ko_id ? sprintf("kerkomroep-%d", $event[0]->ko_id) : null),
+					   'youtube' => ($event[0]->yt_id ? sprintf("youtube-%d", $event[0]->yt_id) : null)
+		);
+		foreach($items as $item_str){
+			if($item_str){
+				if(false !== array_search($item_str, self::$standalone_items)){
+					return str_replace(']', ': duplication]', self::INVALID_SHORTCODE_TEXT);
+				}
+				self::$standalone_items[] = $item_str;
+			}
+		}
+
+		$html = '
+		<div class="sermonsnl_event_lone">';
+
+		$html .= self::html_list_items($event, 1, 'long', true);
+
+		$html .= self::add_logos(
+			($items['kerktijden'] ? get_option('sermonsNL_kerktijden_id') : null),
+								 ($items['kerkomroep'] ? get_option('sermonsNL_kerkomroep_mountpoint') : null),
+								 ($items['youtube'] ? $event[0]->yt_video_id : null),
+								 null, // no yt channel
+						   false // no logo
+		);
+
+		$html .= '
+		</div>';
+			return $html;
+	}
+
+	private static function html_event_links($event, bool $standalone=false){
+		if($event instanceof sermonsNL_event){
+			$ko_audio_url = ($event->kerkomroep ? $event->kerkomroep->audio_url : null);
+			$ko_video_url = ($event->kerkomroep ? $event->kerkomroep->video_url : null);
+			$yt_id = ($event->youtube ? $event->youtube->id : null);
+		}else{
+			$ko_audio_url = $event->ko_audio_url;
+			$ko_video_url = $event->ko_video_url;
+			$yt_id = $event->yt_id;
+		}
 	    $html = '';
-	    if($event->ko_audio_url){
-			$html .= '<p id="sermonsnl_kerkomroep_audio_'.$event->ko_id.'" class="sermonsnl-audio' . ($event->ko_live ? '-live' : '') . '"><a id="ko_audio_'.$event->ko_id.'" href="' . $event->ko_audio_url . '" target="_blank" title="' . __("Kerkomroep audio broadcast","sermons-nl") . '" onclick="return !sermonsnl.playmedia(this, \'' . $event->ko_audio_mimetype . '\', \'ko-audio\');">Kerkomroep' . ($event->ko_live ? ' (live)' : '') . '</a></p>';
+	    if($ko_audio_url || $ko_video_url){
+			$html .= self::html_ko_audio_video_link($event, $standalone);
 		}
-		if($event->ko_video_url){
-			$html .= '<p id="sermonsnl_kerkomroep_video_'.$event->ko_id.'" class="sermonsnl-video' . ($event->ko_live ? '-live' : '') . '"><a id="ko_video_'.$event->ko_id.'" href="' . $event->ko_video_url . '" target="_blank" title="' . __('Kerkomroep video broadcast','sermons-nl') . '" onclick="return !sermonsnl.playmedia(this, \'' . $event->ko_video_mimetype . '\', \'ko-video\');">Kerkomroep' . ($event->ko_live ? ' (live)' : '') . '</a></p>';
-		}
-		/* needs change for implementing kerkdienst gemist
-		if($event->kg_audio_url){
-			$html .= '<p class="audio' . ($event->kg_a['live'] ? ' is-live' : '') . '"><a' . ($event->kg_a['link'] ? ' href="' . $event->kg_a['link'] . '" target="_blank" id="kg_a_'.$dt.'" title="Luisteren via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_a['mimetype'] . '\',\'kg-audio\');"' : '') . '>Kerkdienstgemist' . ($event->kg_a['live'] ? ($event->kg_a['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
-		}
-		if($event->kg_video_url){
-			$html .= '<p class="video' . ($event->kg_v['live'] ? ' is-live' : '') . '"><a' . ($event->kg_v['link'] ? ' href="' . $event->kg_v['link'] . '" target="_blank" id="kg_v_'.$dt.'" title="Kijken via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_v['mimetype'] . '\',\'kg-video\');"' : '') . '>Kerkdienstgemist' . ($event->kg_v['live'] ? ($event->kg_v['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
-		}
-		*/
-		if($event->yt_id){
-			$html .= '<p id="sermonsnl_youtube_'.$event->yt_id.'" class="sermonsnl-video' . ($event->yt_live ? '-live' : ($event->yt_planned ? '-planned' : '')) . '"><a id="yt_video_'.$event->yt_id.'" href="http://www.youtube.com/watch?v='.$event->yt_video_id.'" target="_blank" title="' . __("YouTube video broadcast","sermons-nl") . '" onclick="return !sermonsnl.playmedia(this, \'video/youtube\',\'yt-video\');">YouTube';
-			if($event->yt_live) $html .= ' (live)';
-			elseif($event->yt_planned) $html .= ' (gepland)';
-			$html .= ' <a href="http://www.youtube.com/watch?v='.$event->yt_video_id.'" target="_blank" title="' . __("Open YouTube in a new window","sermons-nl") . '"><img src="' . plugin_dir_url(__FILE__) . 'img/icon_newwindow.png" style="height:15px;"/></a>'; // open in new window icon: https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_newWindow-ltr.svg
-			// $html .= '<br/><img src="'.$event->yt_thumb_url.'" class="yt_thumb" alt="Video miniatuur"/>'; // thumbnails currently not included in data model
-			$html .= '</a></p>'; 
+		// NB: old code, this needs change when implementing kerkdienst gemist
+		//if($event->kg_audio_url){
+		//	$html .= '<p class="audio' . ($event->kg_a['live'] ? ' is-live' : '') . '"><a' . ($event->kg_a['link'] ? ' href="' . $event->kg_a['link'] . '" target="_blank" id="kg_a_'.$dt.'" title="Luisteren via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_a['mimetype'] . '\',\'kg-audio\');"' : '') . '>Kerkdienstgemist' . ($event->kg_a['live'] ? ($event->kg_a['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
+		//}
+		//if($event->kg_video_url){
+		//	$html .= '<p class="video' . ($event->kg_v['live'] ? ' is-live' : '') . '"><a' . ($event->kg_v['link'] ? ' href="' . $event->kg_v['link'] . '" target="_blank" id="kg_v_'.$dt.'" title="Kijken via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_v['mimetype'] . '\',\'kg-video\');"' : '') . '>Kerkdienstgemist' . ($event->kg_v['live'] ? ($event->kg_v['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
+		//}
+		if($yt_id){
+			$html .= self::html_yt_video_link($event, $standalone);
 		}
         return $html;
+	}
+
+	private static function html_ko_audio_video_link($data, $standalone){
+		if($data instanceof sermonsNL_event){
+			$item = $data->kerkomroep;
+			if(!$item) return '';
+		}elseif($data instanceof sermonsNL_kerkomroep){
+			$item = $data;
+		}else{
+			$item = null;
+		}
+		if($item){
+			$ko_id = $item->id;
+			$ko_live = $item->live;
+			$ko_audio_url = $item->audio_url;
+			$ko_audio_mimetype = $item->audio_mimetype;
+			$ko_video_url = $item->video_url;
+			$ko_video_mimetype = $item->video_mimetype;
+		}else{
+			$ko_id = $data->ko_id;
+			$ko_live = $data->ko_live;
+			$ko_audio_url = $data->ko_audio_url;
+			$ko_audio_mimetype = $data->ko_audio_mimetype;
+			$ko_video_url = $data->ko_video_url;
+			$ko_video_mimetype = $data->ko_video_mimetype;
+		}
+		$html = '';
+		if($ko_audio_url){
+			$html .= '
+				<p id="sermonsnl_kerkomroep_audio_'.$ko_id.($standalone?'_lone':'').'" class="sermonsnl-audio' . ($ko_live ? '-live' : '') . '">
+					<a id="ko_audio_'.$ko_id.($standalone?'_lone':'').'" href="' . $ko_audio_url . '" target="_blank" title="' . sprintf(__("Listen to %s audio","sermons-nl"),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . $ko_audio_mimetype . '\', \'ko-audio\''.($standalone?',true':'').');">
+						Kerkomroep' . ($ko_live ? ' (' . __('live','sermons-nl') . ')' : '') . '
+					</a>
+				</p>';
+		}
+		if($ko_video_url){
+			$html .= '
+				<p id="sermonsnl_kerkomroep_video_'.$ko_id.($standalone?'_lone':'').'" class="sermonsnl-video' . ($ko_live ? '-live' : '') . '">
+					<a id="ko_video_'.$ko_id.($standalone?'_lone':'').'" href="' . $ko_video_url . '" target="_blank" title="' . sprintf(__('Watch %s video','sermons-nl'),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . $ko_video_mimetype . '\', \'ko-video\''.($standalone?',true':'').');">
+						Kerkomroep' . ($ko_live ? ' (' . __('live','sermons-nl') . ')' : '') . '
+					</a>
+				</p>';
+		}
+		return $html;
+	}
+
+	private static function html_yt_video_link($data, $standalone){
+		if($data instanceof sermonsNL_event){
+			$item = $data->youtube;
+			if(!$item) return '';
+		}elseif($data instanceof sermonsNL_youtube){
+			$item = $data;
+		}else{
+			$item = null;
+		}
+		if($item){
+			$yt_id = $item->id;
+			$yt_live = $item->live;
+			$yt_planned = $item->planned;
+			$yt_video_id = $item->video_id;
+		}else{
+			$yt_id = $data->yt_id;
+			$yt_live = $data->yt_live;
+			$yt_planned = $data->yt_planned;
+			$yt_video_id = $data->yt_video_id;
+		}
+		$html .= '
+				<p id="sermonsnl_youtube_'.$yt_id.($standalone?'_lone':'').'" class="sermonsnl-video' . ($yt_live ? '-live' : ($yt_planned ? '-planned' : '')) . '">
+					<a id="yt_video_'.$yt_id.($standalone?'_lone':'').'" href="https://www.youtube.com/watch?v='.$yt_video_id.'" target="_blank" title="' . sprintf(__("Watch %s video","sermons-nl"), "YouTube") . '" onclick="return !sermonsnl.playmedia(this, \'video/youtube\',\'yt-video\''.($standalone?',true':'').');">
+						YouTube' . ($yt_live ? ' (' . __('live','sermons-nl') . ')' : ($yt_planned ? ' (' . __('planned','sermons-nl') . ')' : '')) . '
+					</a>';
+		if(!$standalone){
+			$html .= '
+					<a href="https://www.youtube.com/watch?v='.$yt_video_id.'" target="_blank" title="' . __("Open video on YouTube","sermons-nl") . '">
+						<img src="' . plugin_dir_url(__FILE__) . 'img/icon_newwindow.png" style="height:15px;"/>
+					</a>';
+		}
+		$html .= '
+				</p>'; // open in new window icon: https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_newWindow-ltr.svg
+		return $html;
 	}
 	
 	// formats the date including the possible use of "long" and "short" as date formats. 
@@ -1485,29 +2024,27 @@ class sermonsNL{
 	// The function assumes that $datetime is in UTC (set at the end of this script) and will output the datetime in the local time zone (wp setting).
 	private static function datefmt(string $fmt, string $datetime){
 	    $time = new DateTime($datetime, self::$timezone_db);
-	    $time->setTimeZone(wp_timezone());
-		if($fmt == 'long'){
-		    $day = __($time->format('l'), 'sermons-nl');
-		    $month = __($time->format('F'), 'sermons-nl');
-			return $day . $time->format(" j ") . ' ' . $month . ' ' . $time->format('Y H:i');
+		$timestamp = $time->getTimestamp();
+	    if($fmt == 'long'){
+			$fmt = 'l j F Y H:i';
 		}elseif($fmt == 'short'){
-			$day = __($time->format('D'), 'sermons-nl');
-			return $day . $time->format(" d-m-Y H:i");
-		}else{
-		    return $time->format($fmt);
+			$fmt = 'D d-m-Y H:i';
 		}
+		return wp_date($fmt, $timestamp);
 	}
-    
-    // shortcode function to list a single item (t.b.d.)
-    public static function html_sermons_item(array $atts=[], ?string $content=null){
-        
-    }
-    
+
     // adds js and css to the site
     // to do: remove rand part and set fixed version
     public static function add_site_scripts_and_styles(){
-		wp_enqueue_style('sermonsnl-stylesheet', plugin_dir_url(__FILE__) . 'css/site.css', array(), '1.'.rand(10000,99999));
-		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '1.'.rand(10000,99999));
+		wp_enqueue_style('sermonsnl-stylesheet', plugin_dir_url(__FILE__) . 'css/site.css', array(), '1.0.1');
+		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '1.0.1');
+	}
+	public static function add_site_custom_script(){
+		print '
+		<script type="text/javascript">
+		sermonsnl.admin_url = "' . admin_url( 'admin-ajax.php') . '";
+		sermonsnl.check_interval = ' . self::CHECK_INTERVAL . ';
+		</script>';
 	}
     
     // HOOK FUNCTIONS
@@ -1530,21 +2067,28 @@ class sermonsNL{
         dbDelta($sql);
         
         // create tables for kerktijden scheduled sermons and pastors
-        self::kerktijden_scripts();
         $sql = sermonsNL_kerktijden::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
         $sql = sermonsNL_kerktijdenpastors::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
         
         // create table for kerkomroep broadcasts
-        self::kerkomroep_scripts();
         $sql = sermonsNL_kerkomroep::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
         
         // create table for youtube broadcasts
-        self::youtube_scripts();
         $sql = sermonsNL_youtube::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
+
+		// create table for log
+		$sql = "CREATE TABLE {$prefix}sermonsNL_log (
+			id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+			dt datetime NULL,
+			fun varchar(255) DEFAULT '' NOT NULL,
+			log varchar(255) DEFAULT '' NOT NULL,
+			PRIMARY KEY  (id)
+			) $charset_collate;";
+		dbDelta($sql);
 
         // set plugin options to null if they don't exist
         // this tells that none of the broadcast media is active
@@ -1597,7 +2141,8 @@ class sermonsNL{
                 "kerktijdenpastors",
                 "kerkomroep",
                 "kerkdienstgemist",
-                "youtube"
+                "youtube",
+				"log"
             ) as $surname){
             $table_name = $wpdb->prefix . "sermonsNL_" . $surname;
             $wpdb->query( "DROP TABLE IF EXISTS $table_name" );
@@ -1610,17 +2155,15 @@ class sermonsNL{
     }
     
     // RECORD ACTIVITIES RELATED TO LOADING REMOTE DATA
-    public static function log(string $fun, string $str){
-		$fname = plugin_dir_path( __FILE__ ) . 'log.log';
-		$c = array();
-		if(is_readable($fname)){
-			$c = file($fname);
-			$c = array_slice($c, -999); // leave a max of 1000 records
-		}
-		$log = (new DateTime("now", wp_timezone()))->format("Y-m-d H:i:s") . " $fun: $str\n";
-		$c[count($c)] = $log;
-		file_put_contents($fname, implode($c));
-		return $log;
+    public static function log(string $fun, string $log){
+		$data = array(
+			'dt' => (new DateTime("now", self::$timezone_db))->format("Y-m-d H:i:s"),
+			'fun' => $fun,
+			'log' => $log
+		);
+		global $wpdb;
+		$wpdb->insert($wpdb->prefix . 'sermonsNL_log', $data);
+		return $data;
 	}
     
 }
@@ -1628,45 +2171,52 @@ class sermonsNL{
 sermonsNL::$timezone_db = new DateTimeZone("UTC");
 sermonsNL::$timezone_ko = sermonsNL::$timezone_kt = new DateTimeZone("Europe/Amsterdam");
 
+// include other classes
 require_once(plugin_dir_path(__FILE__) . 'event.php');
+require_once(plugin_dir_path(__FILE__) . 'kerktijden.php');
+require_once(plugin_dir_path(__FILE__) . 'kerkomroep.php');
+require_once(plugin_dir_path(__FILE__) . 'youtube.php');
 
 // ACTIVATION, DEACTIVATION AND UNINSTALL HOOKS
 register_activation_hook(__FILE__, array('sermonsNL', 'activate_plugin'));
 register_deactivation_hook(__FILE__, array('sermonsNL', 'deactivate_plugin'));
 register_uninstall_hook(__FILE__, array('sermonsNL', 'uninstall_plugin'));
 
-// STUFF TO GET THE CRON JOBS DONE (UPDATING FROM THE SOURCES)
+// FILTERS TO GET THE CRON JOBS DONE (UPDATING FROM THE SOURCES)
 add_filter('cron_schedules', array('sermonsNL','add_cron_interval'));
 add_action('sermonsNL_cron_quarterly', array('sermonsNL','update_quarterly'));
 add_action('sermonsNL_cron_daily', array('sermonsNL','update_daily'));
 
-// STUFF FOR WP-ADMIN
+// ACTION NEEDED TO LET THE YOUTUBE / KERKOMROEP / KERKTIJDEN ARCHIVES BE LOADED IN THE BACKGROUND
+add_action('wp_ajax_sermonsnl_get_remote_data_in_background', array('sermonsNL', 'get_remote_data_in_background'));
+
+// ACTIONS FOR ADMIN
 add_action('admin_init', array('sermonsNL','register_settings'));
 add_action('admin_menu', array('sermonsNL','add_admin_menu'));
 add_action('admin_enqueue_scripts', array('sermonsNL','add_admin_scripts_and_styles'));
 add_action('admin_head', array("sermonsNL","add_admin_custom_script"));
-add_action('update_option_sermonsNL_kerktijden_id', array('sermonsNL', 'kerktijden_change_id'), 10, 2);
-add_action('update_option_sermonsNL_kerkomroep_mountpoint', array('sermonsNL', 'kerkomroep_change_mountpoint'), 10, 2);
-add_action('update_option_sermonsNL_youtube_channel', array('sermonsNL', 'youtube_change_channel'), 10, 2);
-
 add_action('wp_ajax_sermonsnl_admin_navigate_table', array('sermonsNL','admin_navigate_table'));
 add_action('wp_ajax_sermonsnl_admin_show_details', array('sermonsNL','admin_show_details'));
 add_action('wp_ajax_sermonsnl_admin_link_item_to_event', array('sermonsNL','link_item_to_event'));
 add_action('wp_ajax_sermonsnl_admin_unlink_item', array('sermonsNL','unlink_item'));
 add_action('wp_ajax_sermonsnl_admin_delete_event', array('sermonsNL','delete_event'));
+add_action('wp_ajax_sermonsnl_submit_update_event', array('sermonsNL','sermonsnl_submit_update_event'));
+add_action('wp_ajax_sermonsnl_config_submit', array('sermonsNL','config_submit'));
 
-// STUFF FOR SHOWING CONTENT ON THE WEBSITE
-// html, js and css
+// ACTIONS AND SHORTCODES FOR SHOWING CONTENT ON THE WEBSITE
+// shortcodes
 add_shortcode('sermons-nl-list', array('sermonsNL', 'html_sermons_list'));
 add_shortcode('sermons-nl-event', array('sermonsNL', 'html_sermons_event'));
 add_shortcode('sermons-nl-item', array('sermonsNL', 'html_sermons_item'));
+// html, js and css
 add_action('wp_enqueue_scripts', array('sermonsNL','add_site_scripts_and_styles'));
+add_action('wp_head', array('sermonsNL','add_site_custom_script'));
+
 // ajax: show more button
 add_action('wp_ajax_sermonsnl_showmore', array('sermonsNL','show_more'));
 add_action('wp_ajax_nopriv_sermonsnl_showmore', array('sermonsNL','show_more'));
 // ajax: check status
 add_action('wp_ajax_sermonsnl_checkstatus', array('sermonsNL','check_status'));
 add_action('wp_ajax_nopriv_sermonsnl_checkstatus', array('sermonsNL','check_status'));
-
 
 ?>

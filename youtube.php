@@ -16,12 +16,14 @@ class sermonsNL_youtube{
     }
     
     public function __get($key){
-        if($key == 'dt'){
-            return (!empty($this->data['dt_planned']) ? $this->data['dt_planned'] : $this->data['dt_actual']);
-        }
-        if($key == 'event'){
-            if($this->data['event_id'] === null) return null;
-            return sermonsNL_event::get_by_id($this->data['event_id']);
+		switch($key){
+			case 'dt':
+				return (!empty($this->data['dt_planned']) ? $this->data['dt_planned'] : $this->data['dt_actual']);
+			case 'event':
+				if($this->data['event_id'] === null) return null;
+				return sermonsNL_event::get_by_id($this->data['event_id']);
+			case 'type':
+				return 'youtube';
         }
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         return null;
@@ -118,7 +120,7 @@ class sermonsNL_youtube{
 	    if(empty($data)){
 	        return null;
 	    }
-	    return self::get_by_id($data[0]['id']);
+	    return self::get_by_id($data[0]['id']); // assume only one livestream
 	}
 	
 	public static function get_planned(bool $include_all = false){
@@ -163,24 +165,14 @@ class sermonsNL_youtube{
         ) $charset_collate;";
 	}
 	
-	public static function change_channel($old_value, $value){
-        if($old_value != $value){
-            global $wpdb;
-            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_youtube");
-            if(!empty($value)){
-                // load the entire archive
-                self::get_remote_data();
-            }
-        }
-    }
-
     // METHODS TO LOAD NEW DATA FROM youtube.com
     
     public static function get_remote_data(int $n_records=null){
         $data = self::get_remote_search($n_records === null ? INF : $n_records);
-        // logging
+		if($data === false) return false; // get_remote_search has logged the error
         $ok = self::compare_remote_to_local_data($data);
-        if($ok) return $data;
+        if(!$ok) return false;
+		return $data;
     }
     
     public static function get_remote_update(array $video_ids){
@@ -191,25 +183,43 @@ class sermonsNL_youtube{
         $newdata = array();
         for($i=0; $i<count($video_ids); $i+=50){
             $subset = array_slice($data, $i, min(50, count($video_ids)-$i));
-            self::get_remote_details($subset);
+            $ok = self::get_remote_details($subset);
+			if(!$ok){
+				// probably connection error, get_remote_details should have logged that.
+				return false;
+			}
             $newdata = array_merge($newdata, $subset);
         }
         $ok = self::compare_remote_to_local_data($newdata, true);
-        if($ok) return $newdata;
-        // to do: delete items that are not found. if you search for it and it is not found we may assume it is not there anymore.
-        // logging: how many updated / deleted
+		if(!$ok) return false;
+		return $newdata;
+
     }
     
+    # daily update function
     public static function get_remote_update_all(){
         $data = self::get_all();
+		# delete too old items
+		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
+		$checkdate = new DateTime("now -{$yt_weeksback} weeks");
+		foreach($data as $key => $item){
+			$item_dt = new DateTime($item->dt);
+			if($item_dt < $checkdate){
+				$item->delete();
+				unset($data[$key]);
+			}
+		}
+		# load data from archive
         $video_ids = array_map(function($item){return $item->video_id;}, $data);
         if(!empty($video_ids)){
             return self::get_remote_update($video_ids);
         }else{
             // logging: nothing to update
+			sermonsNL::log("YouTube:get_remote_update_all", "Nothing to update.");
         }
     }
-    
+
+
     private static function compare_remote_to_local_data(array $remote_data, bool $delete_if_dt_missing=false){
 	    $local_data = self::get_all();
 	    $_new = 0;
@@ -224,7 +234,6 @@ class sermonsNL_youtube{
 	            if(empty($remote_item['dt_planned']) && empty($remote_item['dt_actual'])) continue; 
 	            // create new
 	            $local_item = self::add_record($remote_item);
-	            $_new ++;
 	            // identify event for this item
 	            $dt = $local_item->dt;
 	            $dt2 = $local_item->dt_end;
@@ -235,10 +244,12 @@ class sermonsNL_youtube{
 	            }else{
 	                $event->update_dt_min_max($dt, $dt2);
 	            }
-	            $_evt[] = $event->id;
 	            $local_item->update(array('event_id'=>$event->id));
+	            $_new ++;
+	            $_evt[] = $event->id;
 	        }else{
 	            // if no (planned) start date AND $delete_if_dt_missing = true AND video not accessible: delete
+				// this should also ensure that remotely deleted videos are delete here as well
 	            if(empty($remote_item['dt_planned']) && empty($remote_item['dt_actual'])){
 	                if($delete_if_dt_missing){
 	                    $local_item->delete();
@@ -246,15 +257,20 @@ class sermonsNL_youtube{
 	                }
 	            }else{
 	                // it contains (planned) start date, so it is safe to be updated
-	                $ch = $local_item->update($remote_item);
-	                if($ch) $_upd ++;
-	                $dt = $local_item->dt;
-	                $dt2 = $local_item->dt_end;
-	                if($local_item->event) $local_item->event->update_dt_min_max($dt, $dt2);
+	                $changed = $local_item->update($remote_item);
+	                if($changed){
+						$_upd ++;
+						$dt = $local_item->dt;
+						$dt2 = $local_item->dt_end;
+						if(!$dt2) $dt2 = $dt;
+						if($local_item->event) $local_item->event->update_dt_min_max($dt, $dt2);
+					}
 	            }
 	        }
         }
-        sermonsNL::log("YouTube:remote_to_local", "$_new new items (events #" . implode(",", $_evt) . "), $_upd updated, and $_del deleted.");
+        $_tot = count($remote_data);
+        $_unc = $_tot - $_new - $_upd - $_del;
+		sermonsNL::log("YouTube:remote_to_local", "Obtained $_tot records from YouTube: $_new new items, $_upd updated, $_del deleted, and $_unc unchanged.");
         return true;
 	}
     
@@ -264,48 +280,58 @@ class sermonsNL_youtube{
 		$max_records = 50;
 		$yt_key = get_option('sermonsNL_youtube_key');
 		$yt_channel = get_option('sermonsNL_youtube_channel');
+		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
 		$data = array();
 		
 		//$url = "https://www.googleapis.com/youtube/v3/search?key=$yt_key&channelId=$yt_channel&part=snippet,id&order=date&maxResults=" . min($n_records,$max_records) . (empty($nextPageToken) ? "" : "&pageToken=$nextPageToken");
         // https://stackoverflow.com/questions/18953499/youtube-api-to-fetch-all-videos-on-a-channel/27872244#27872244
         // playlist associated with youtube channel is simply replacing 'UC' with 'UU' as first characters.
         $playlist = 'UU' . substr($yt_channel, 2); 
-        $url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=" . min($n_records,$max_records) . "&playlistId=$playlist&key=$yt_key" . (empty($nextPageToken) ? "" : "&pageToken=$nextPageToken");
+        $path = "/youtube/v3/playlistItems?part=snippet&maxResults=" . min($n_records,$max_records) . "&playlistId=$playlist&key=$yt_key" . (empty($nextPageToken) ? "" : "&pageToken=$nextPageToken");
 
-		$api_str = file_get_contents($url);
-		if(empty($api_str)){
-		    sermonsNL::log(__CLASS__."::get_remote_data", "Error obtaining data from youtube api: empty response", E_USER_WARNING);
-		    return $data;
+		$api_data = self::load_googleapis_url($path);
+		if(false === $api_data){
+			// error handling already done by get_googleapis_url
+			return false;
 		}
-		$api_data = json_decode($api_str, true);
-		if(empty($api_data['items'])){
-		    sermonsNL::log(__CLASS__."::get_remote_data", "The youtube api did not provide a valid json response");
-		    return $data;
-		}
+
 		foreach($api_data['items'] as $item){
 		    // note that the search api uses 'id' whereas the playlistItems api uses 'resourceId'
 		    $vid = $item['snippet']['resourceId']['videoId'];
 			if(empty($vid)) continue; // not a video?
-			$data[count($data)] = array(
-				'video_id' => $vid//,
-				//'title' => $item['snippet']['title'], // I can retrieve this through the update anyway
-				//'description' => $item['snippet']['description'], // this is limited in length
-				//'thumb_url' => $item['snippet']['thumbnails']['medium']['url'], // not needed
-				//'thumb_width' => $item['snippet']['thumbnails']['medium']['width'],
-				//'thumb_height' => $item['snippet']['thumbnails']['medium']['height']
-			);
+			$data[count($data)] = array('video_id' => $vid);
 		}
 
 		// get more details, particularly (planned) stream time
+		$getmore = true;
 		if(!empty($data)){
     		self::get_remote_details($data);
+			// check if date of last item is more than kt_weeksback weeks ago
+			$checkdate = new DateTime("now -{$yt_weeksback} weeks");
+			foreach(array_reverse(array_keys($data)) as $key){
+				$dt = $data[$key]['dt_actual'];
+				if(!$dt) $dt = $data[$key]['dt_planned'];
+				$dt = new DateTime($dt);
+				if($dt < $checkdate){
+					# don't include it and don't load next page (next page will include older items)
+					unset($data[$key]);
+					$getmore = false;
+				}else{
+					# items higher up in the array will be more recent
+					break;
+				}
+			}
 		}
 
 		// check if next page needs to be loaded
-		if($n_records > $max_records && !empty($api_data['nextPageToken'])){
+		if($getmore && $n_records > $max_records && !empty($api_data['nextPageToken'])){
 			// call next page request
 			$next_page_data = self::get_remote_search(is_finite($n_records) ? $n_records - $max_records : INF, $api_data['nextPageToken']);
-			if(!empty($next_page_data)) $data = array_merge($data, $next_page_data);
+			if(false === $next_page_data){
+				// error when loading next page, should be logged, don't return the data
+				return false;
+			}
+			$data = array_merge($data, $next_page_data);
 		}
 		
 		return $data;
@@ -315,17 +341,13 @@ class sermonsNL_youtube{
 		// https://developers.google.com/youtube/v3/docs/videos/list
 		$yt_key = get_option('sermonsNL_youtube_key');
         $vids = array_map(function($x){return $x['video_id'];}, $data);
-		$url = "https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=".implode(',',$vids)."&key=".$yt_key;
-		$api_str = file_get_contents($url);
-		if(empty($api_str)){
-		    wp_trigger_error(__CLASS__."::get_remote_details", "Error obtaining data from youtube api", E_USER_WARNING);
-		    return false;
+		$path = "/youtube/v3/videos?part=liveStreamingDetails,snippet&id=".implode(',',$vids)."&key=".$yt_key;
+		$api_details = self::load_googleapis_url($path);
+		if(false === $api_details){
+			// error handling already done by get_googleapis_url
+			return false;
 		}
-		$api_details = json_decode($api_str,true);
-		if(empty($api_details['items'])){
-		    wp_trigger_error(__CLASS__."::get_remote_details", "The youtube api did not provide a valid json response", E_USER_WARNING);
-		    return false;
-		} 
+
         foreach($api_details['items'] as $item){
 			$vid = $item['id'];
 			$i = array_search($vid, $vids);
@@ -361,6 +383,81 @@ class sermonsNL_youtube{
 			$data[$i]['live'] = $live;
 		}
 		return true;
+	}
+
+	private static function load_googleapis_url($path){
+		$fp = fsockopen("ssl://www.googleapis.com", 443, $error_code, $error_message);
+		if(!$fp){
+			sermonsNL::log(__CLASS__."::load_googleapis_url", "Could not connect to youtube api: $error_message (#$error_code)");
+		}
+		$out = "GET $path HTTP/1.1\r\n";
+		$out .= "Host: www.googleapis.com\r\n";
+		$out .= "Connection: Close\r\n\r\n";
+		fwrite($fp, $out);
+
+		// read headers
+		$http_status = trim(fgets($fp, 128));
+		$headers = array();
+		while(!feof($fp)){
+			$line = fgets($fp, 128);
+			if(empty(trim($line))) break; // end of headers
+			$colon = strpos($line, ':');
+			$hname = strtolower(substr($line, 0, $colon));
+			$hvalue = trim(substr($line, $colon+1));
+			$headers[$hname] = $hvalue;
+		}
+		$chunked = (isset($headers['transfer-encoding']) && $headers['transfer-encoding'] == "chunked");
+
+		// read content
+		$content = "";
+		if($chunked){
+			$chunksize = false;
+			while(!feof($fp)){
+				if($chunksize === false){
+					$line = fgets($fp, 128);
+					$chunksize = hexdec(trim($line));
+				}elseif($chunksize > 0){
+					$readsize = min(512, $chunksize);
+					$content .= fread($fp, $readsize);
+					$chunksize -= $readsize;
+					if($chunksize <= 0){
+						fgets($fp, 3); // skip newline at end of chunk
+						$chunksize = false;
+					}
+				}else{
+					break;
+				}
+			}
+		}else{
+			while(!feof($fp)){
+				$line = fgets($fp);
+				if($line !== false) $content .= $line;
+			}
+		}
+		fclose($fp);
+		// error handling
+		if(empty($content)){
+			sermonsNL::log(__CLASS__."::load_googleapis_url", "Error obtaining data from youtube api: empty response. Status code: $http_status");
+			return false;
+		}
+		$api_data = json_decode($content, true);
+		if(null === $api_data){
+			sermonsNL::log(__CLASS__."::load_googleapis_url", "Error obtaining data from youtube api: no valid json response. Status code: $http_status");
+			return false;
+		}
+		if(isset($api_data['error'])){
+			if($api_data['error']['code'] == 404) $msg = 'The channel cannot be found. Please check the YouTube channel ID in the configuration.';
+			elseif($api_data['error']['code'] == 400) $msg = 'API key not valid. Please check the YouTube api key in the configuration.';
+			else $msg = $api_data['error']['message'];
+			sermonsNL::log(__CLASS__."::load_googleapis_url", $api_data['error']['code'] . ": " . $msg);
+			return false;
+		}
+		if(!isset($api_data['items'])){
+			sermonsNL::log(__CLASS__."::get_remote_search", "The youtube api data did not include expected key 'items'.");
+			return false;
+		}
+		// all ok, return data
+		return $api_data;
 	}
 
 }

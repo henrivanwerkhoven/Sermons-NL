@@ -129,6 +129,18 @@ class sermonsNL_kerktijden{
 	    }
 	    return null;
 	}
+
+	// deletes all records within the date range date_min and date_max (both a string formatted as yyyy-mm-dd)
+	// except for datetime stamps in the array dt_list (formatted as yyyy-mm-dd hh:ii:ss)
+	public static function delete_remotely_nonexisting_items($date_min, $date_max, $dt_list){
+		if($date_min > $date_max) return null;
+		global $wpdb;
+		$q = "DELETE FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE dt >= \"{$date_min} 00:00:00\" AND dt <= \"{$date_max} 23:59:59\"";
+		foreach($dt_list as $dt_existing){
+			$q .= " AND dt != \"{$dt_existing}\"";
+		}
+		$wpdb->query($q);
+	}
 	
 	public static function query_create_table($prefix, $charset_collate){
 	    global $wpdb;
@@ -144,17 +156,6 @@ class sermonsNL_kerktijden{
         ) $charset_collate;";
 	}
 
-    public static function change_id($old_value, $value){
-        if($old_value != $value){
-            global $wpdb;
-            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermonsNL_kerktijden");
-            if(!empty($value)){
-                self::get_remote_data_forward();
-                self::get_remote_data_backward();
-            }
-        }
-    }
-
     // METHODS TO LOAD NEW DATA FROM kerktijden.nl
     
 	public static function get_remote_data_forward(){
@@ -162,6 +163,10 @@ class sermonsNL_kerktijden{
 	    $weeks = get_option('sermonsNL_kerktijden_weeksahead');
 		$url = "https://api.kerktijden.nl/api/gathering/GetGatheringsForWidget?communityId=" . $kt_id . "&weeks=" . $weeks;
 		$data = self::get_remote_data($url);
+		if(false === $data){
+			// presumably connection error, don't continue
+			return false;
+		}
 		return self::compare_remote_to_local_data($data);
 	}
 
@@ -174,15 +179,22 @@ class sermonsNL_kerktijden{
 			$month = date('Y-m-d', strtotime("first day of -$m month"));
 			$url = "https://api.kerktijden.nl/api/gathering/GetGatherings?communityId=" . $kt_id . "&month=" . $month;
 			$data_m = self::get_remote_data($url);
-			if(!empty($data_m)) $data = array_merge($data_m, $data);
+			if(false === $data_m){
+				// presumably connection error, don't continue
+				return false;
+			}
+			$data = array_merge($data_m, $data);
 		}
 		return self::compare_remote_to_local_data($data);
 	}
 
 	public static function get_remote_data($url){
-		$api_str = file_get_contents($url);
 		$data = array();
-		if(!empty($api_str)){
+		$api_str = file_get_contents($url);
+		if(empty($api_str)){
+			sermonsNL::log("sermonsNL_kerktijden::get_remote_data", "Error: empty response.");
+			return false;
+		}else{
 			$api_data = json_decode($api_str, true);
 			// if empty there are no sermons in that month
 			if(!empty($api_data)){
@@ -205,7 +217,7 @@ class sermonsNL_kerktijden{
 	public static function compare_remote_to_local_data($remote_data){
 	    $local_data = self::get_all();
 	    // fill this with date range of obtained data and remember all the timestamps
-	    $date_min = date("%Y-%m-%d");
+	    $date_min = "9999-12-31";
 	    $date_max = "1970-01-01";
 	    $dt_list = array();
 	    // loop through remote data array
@@ -230,6 +242,8 @@ class sermonsNL_kerktijden{
             $date_max = max($date_max, $date);
             $dt_list[count($dt_list)] = $row['dt'];
         }
+        // delete non-existing items within the date range that was observed
+        self::delete_remotely_nonexisting_items($date_min, $date_max, $dt_list);
         return true;
 	}
 
@@ -330,6 +344,8 @@ class sermonsNL_kerktijdenpastors{
 	    }
 	    // update remaining pastors
 	    $pastors = self::get_all();
+		$success = 0;
+		$failure = 0;
 	    foreach($pastors as $id => $pastor){
     		$url = "https://api.kerktijden.nl/api/person/getperson?id=". (int)$id;
     		$api_str = file_get_contents($url);
@@ -341,9 +357,15 @@ class sermonsNL_kerktijdenpastors{
     				    'town' => self::extract_town($api_data, $kt_id)
     				);
     	        	$pastor->update($new_data);
-    			}
+					$success ++;
+    			}else{
+					$failure ++;
+				}
+			}else{
+				$failure ++;
 			}
 		}
+		sermonsNL::log("sermonsNL_kerktijdenpastors::get_remote_data", "Pastor names updated: " . $success . " verified successfully" . ($failure ? "; ".$failure . " failed." : "."));
 	}
 
     // these functions pull pastor name and town, respectively, from the api data
