@@ -1539,7 +1539,7 @@ class sermonsNL{
 		// check if any service is active
 		$kt_id = (int)get_option("sermonsNL_kerktijden_id");
 		$ko_mp = (int)get_option("sermonsNL_kerkomroep_mountpoint");
-		$yt_ch = (int)get_option("sermonsNL_youtube_channel");
+		$yt_ch = get_option("sermonsNL_youtube_channel");
 		if(!$kt_id && !$ko_mp && !$yt_ch){
 			return "<p>" . esc_html__("Sermons-NL has not been configured yet. Please check the Sermons-NL configuration page in the WordPress dashboard.","sermons-nl") . "</p>";
 		}
