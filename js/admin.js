@@ -385,11 +385,11 @@ var sermonsnl_admin = {
         if(fmt_obj.value != 'long' && fmt_obj.value != ''){
             shortcode = shortcode.replace(']', ' datefmt="' + fmt_obj.value + '"]');
         }
-        if(!more_obj.checked){
-            shortcode = shortcode.replace(']', ' more-buttons=0]');
+        if(more_obj.checked){
+            shortcode = shortcode.replace(']', ' more-buttons=1]');
         }
-        if(!logo_obj.checked){
-            shortcode = shortcode.replace(']', ' sermonsnl-logo=0]');
+        if(logo_obj.checked){
+            shortcode = shortcode.replace(']', ' sermonsnl-logo=1]');
         }
         target_obj.innerText = shortcode;
         return true;

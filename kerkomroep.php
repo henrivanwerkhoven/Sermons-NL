@@ -16,8 +16,8 @@ class sermonsNL_kerkomroep{
     public function __get($key){
         switch($key){
             case  'dt_end':
-                $result_date = strtotime(sprintf('%s +%d seconds', $this->dt, $this->duration));
-                return date('Y-m-d H:i:s', $result_date);
+                $dt = new DateTime(sprintf('%s +%d seconds', $this->dt, $this->duration), SermonsNL::$timezone_db);
+                return $dt->format('Y-m-d H:i:s');
             case 'event':
                 if($this->data['event_id'] === null) return null;
                 return sermonsNL_event::get_by_id($this->data['event_id']);
@@ -48,6 +48,7 @@ class sermonsNL_kerkomroep{
             }
         }
         if($update){
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
             $wpdb->update($wpdb->prefix.'sermonsNL_kerkomroep', $data, array('id' => $this->id));
             return true;
         }
@@ -56,6 +57,7 @@ class sermonsNL_kerkomroep{
     
     public function delete(){
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $wpdb->delete($wpdb->prefix.'sermonsNL_kerkomroep', array('id' => $this->id));
         unset(self::$items[$this->id]);
     }
@@ -64,7 +66,8 @@ class sermonsNL_kerkomroep{
 	    if(self::$items === null){
 	        self::$items = array();
     	    global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep ORDER BY dt", OBJECT_K);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep ORDER BY dt", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	            if($object->event_id) self::$items_by_event[$object->event_id] = self::$items[$id];
@@ -77,7 +80,8 @@ class sermonsNL_kerkomroep{
 	    $items = self::get_all();
 	    if(!isset($items[$id])){
 	        global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep where id=$id", OBJECT_K);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep where id=%d",$id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -96,7 +100,8 @@ class sermonsNL_kerkomroep{
 	
 	public static function get_all_by_event_id(int $event_id){
 	    global $wpdb;
-    	$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep WHERE event_id=$event_id");
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerkomroep WHERE event_id=%d",$event_id));
     	$ret = array();
     	foreach($data as $row){
     	    $ret[] = self::get_by_id($row->id);
@@ -106,7 +111,8 @@ class sermonsNL_kerkomroep{
 	
 	public static function get_live(){
 	    global $wpdb;
-	    $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_kerkomroep where live=1", ARRAY_A);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_kerkomroep where live=1", ARRAY_A);
 	    if(empty($data)){
 	        return null;
 	    }
@@ -116,7 +122,8 @@ class sermonsNL_kerkomroep{
 	public static function add_record($data){
 	    global $wpdb;
         // use replace because sometimes two parallel processes want to save the new item at the same time
-	    $ok = $wpdb->replace($wpdb->prefix.'sermonsNL_kerkomroep', $data);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $ok = $wpdb->replace($wpdb->prefix.'sermonsNL_kerkomroep', $data);
         if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -132,7 +139,7 @@ class sermonsNL_kerkomroep{
         pastor varchar(255) NULL,
         theme varchar(255) NULL,
         scripture varchar(255) NULL,
-        description text(65535) DEFAULT '' NOT NULL,
+        description text(65535) NOT NULL,
         audio_url varchar(255) NULL,
         audio_mimetype varchar(255) NULL,
         video_url varchar(255) NULL,
@@ -150,7 +157,9 @@ class sermonsNL_kerkomroep{
 		$port = 443;
 		$protocol = 'ssl://';
 
-		$fp = fsockopen($protocol . $host, $port, $errno, $errstr, 30);
+        /* load data from the kerktijden api using php naive functions for writing to and reading from an ssl socket */
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen
+        $fp = fsockopen($protocol . $host, $port, $errno, $errstr, 30);
 		if(!$fp){
 	        sermonsNL::log("sermonsNL_kerkomroep::get_remote_data", "Error: could not establish connection with $host: (#$errno): $errstr");
     		return false;
@@ -170,12 +179,14 @@ class sermonsNL_kerkomroep{
 			"Connection: Close\r\n" .
 			"\r\n" .
 			$postdata;
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fputs
 		fputs($fp, $out);
 
         // read status
         $line = fgets($fp);
         if(strpos($line, '200') === false){
             sermonsNL::log("sermonsNL_kerkomroep::get_remote_data","Status error while loading kerkomroep data: $line");
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
             fclose($fp);
 		    return false;
         }
@@ -201,6 +212,7 @@ class sermonsNL_kerkomroep{
 		            $chunksize = hexdec(trim($line));
 		        }elseif($chunksize > 0){
 		            $readsize = min(512, $chunksize);
+                    // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
 		            $content .= fread($fp, $readsize);
 		            $chunksize -= $readsize;
 		            if($chunksize <= 0){
@@ -217,6 +229,7 @@ class sermonsNL_kerkomroep{
 		        if($line !== false) $content .= $line;
 		    }
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		fclose($fp);
         return $content;
     }

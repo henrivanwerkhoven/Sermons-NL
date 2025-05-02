@@ -5,9 +5,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: SermonsNL plugin v0.1\n"
 "Report-Msgid-Bugs-To: Henri van Werkhoven <henrivanwerkhoven2@gmail.com>\n"
-"POT-Creation-Date: 2025-04-28 21:52+0200\n"
+"POT-Creation-Date: 2025-05-02 17:12+0200\n"
 "PO-Revision-Date: \n"
-"Last-Translator: \n"
+"Last-Translator: Henri van Werkhoven <henrivanwerkhoven2@gmail.com>\n"
 "Language-Team: Henri van Werkhoven <henrivanwerkhoven2@gmail.com>\n"
 "Language: nl\n"
 "MIME-Version: 1.0\n"
@@ -23,93 +23,107 @@ msgstr ""
 "X-Generator: Poedit 3.4.2\n"
 "X-Poedit-SearchPath-0: .\n"
 
-#: sermons-nl.php:316
-msgid "Sermons-NL administration"
-msgstr "Sermons-NL administratie"
+#: sermons-nl.php:51 sermons-nl.php:335
+msgid "Sermons-NL"
+msgstr "Kerkdiensten-NL"
 
-#: sermons-nl.php:316
+#: sermons-nl.php:52
+msgid "List planned and broadcasted Dutch church services in a convenient way"
+msgstr ""
+"Geef geplande en uitgezonden Nederlandse kerkdiensten weer op een handige "
+"manier"
+
+#: sermons-nl.php:335
+msgid "Sermons-NL plugin"
+msgstr "Kerkdiensten-NL plugin"
+
+#: sermons-nl.php:336
+msgid "Sermons-NL administration"
+msgstr "Kerkdiensten-NL administratie"
+
+#: sermons-nl.php:336
 msgid "Administration"
 msgstr "Administratie"
 
-#: sermons-nl.php:317
+#: sermons-nl.php:337
 msgid "Sermons-NL configuration"
-msgstr "Sermons-NL instellingen"
+msgstr "Kerkdiensten-NL instellingen"
 
-#: sermons-nl.php:317
+#: sermons-nl.php:337
 msgid "Configuration"
 msgstr "Instellingen"
 
-#: sermons-nl.php:318
+#: sermons-nl.php:338
 msgid "Sermons-NL log"
-msgstr "Sermons-NL logbestand"
+msgstr "Kerkdiensten-NL logbestand"
 
-#: sermons-nl.php:318
+#: sermons-nl.php:338
 msgid "Log"
 msgstr "Logbestand"
 
-#: sermons-nl.php:356
+#: sermons-nl.php:377
 msgid "Sermons-NL overview page"
-msgstr "Sermons-NL overzichtspagina"
+msgstr "Kerkdiensten-NL overzichtspagina"
 
-#: sermons-nl.php:360
+#: sermons-nl.php:381
 msgid "Status"
 msgstr "Status"
 
-#: sermons-nl.php:363
+#: sermons-nl.php:386
 #, php-format
 msgid "Your site includes a total of %d sermons."
 msgstr "Je site bevat in totaal %d kerkdiensten."
 
-#: sermons-nl.php:365
+#: sermons-nl.php:391
 #, php-format
 msgid ""
-"These are based on %d entries from Kerktijden, %d from Kerkomroep, and %d "
-"from Youtube."
+"These are based on %1$d entries from Kerktijden, %2$d from Kerkomroep, and "
+"%3$d from Youtube."
 msgstr ""
-"Deze bestaan uit %d regels van Kerktijden, %d van Kerkomroep en %d van "
+"Deze bestaan uit %1$d regels van Kerktijden, %2$d van Kerkomroep en %3$d van "
 "Youtube."
 
-#: sermons-nl.php:370
+#: sermons-nl.php:400
 #, php-format
 msgid ""
-"<strong>Note: It is recommended to disable WordPress cron.</strong> Sermons-"
-"NL will regularly update data in the background. This can slow down your "
-"website. To optimize performance, check if your hosting server allows you to "
-"use cron jobs. The recommended frequency of cron jobs is once every 15 "
-"minutes. %s Please refer to this instruction. %s"
+"%1$sNote: It is recommended to disable WordPress cron.%2$s Sermons-NL will "
+"regularly update data in the background. This can slow down your website. To "
+"optimize performance, check if your hosting server allows you to use cron "
+"jobs. The recommended frequency of cron jobs is once every 15 minutes. %3$s "
+"Please refer to this instruction. %4$s"
 msgstr ""
-"<strong>Let op: Het is aanbevolen om WordPress cron uit te schakelen.</"
-"strong> Sermons-NL zal regelmatig gegevens bijwerken op de achtergrond. Dit "
-"kan je website traag maken. Om de prestaties te verbeteren, kun je "
-"controleren of je hosting server de mogelijkheid heeft om cron jobs te "
-"gebruiken. De aanbevolen frequentie van cron jobs is elke 15 minuten. %s "
-"Gebruik bijvoorbeeld deze instructie. %s"
+"%1$sLet op: Het is aanbevolen om WordPress cron uit te schakelen.%2$s "
+"Sermons-NL zal regelmatig gegevens bijwerken op de achtergrond. Dit kan je "
+"website traag maken. Om de prestaties te verbeteren, kun je controleren of "
+"je hosting server de mogelijkheid heeft om cron jobs te gebruiken. De "
+"aanbevolen frequentie van cron jobs is elke 15 minuten. %3$sVolg "
+"bijvoorbeeld deze instructie.%4$s"
 
-#: sermons-nl.php:375
-#, php-format
+#: sermons-nl.php:411
 msgid ""
-"<strong>Note: the last check for updates is %d hours ago. It seems that the "
-"cron job is not correctly configured. %s Please refer to this instruction. %s"
+"%1$sNote: the last check for updates is %$2d hours ago. It seems that the "
+"cron job is not correctly configured.%3$s %4$sPlease refer to this "
+"instruction. %5$s"
 msgstr ""
-"<strong>Let op: de laatste controle up updates is %d uur geleden. Het lijkt "
-"erop dat de cron job niet goed is ingesteld. %s Gebruik bijvoorbeeld deze "
-"instructie. %s"
+"%1$sLet op: de laatste controle up updates is %2$d uur geleden. Het lijkt "
+"erop dat de cron job niet goed is ingesteld.%3$s %4$sGebruik bijvoorbeeld "
+"deze instructie. %5$s"
 
-#: sermons-nl.php:381
+#: sermons-nl.php:418
 #, php-format
 msgid "There are %d issues that require your attention."
 msgstr "Er zijn %d problemen die uw aandacht nodig hebben."
 
-#: sermons-nl.php:384
+#: sermons-nl.php:421
 msgid "There are currently no issues to resolve."
 msgstr "Er zijn op dit moment geen problemen om op te lossen."
 
-#: sermons-nl.php:391
+#: sermons-nl.php:430
 #, php-format
 msgid "Resolve %d issues"
 msgstr "Los %d problemen op"
 
-#: sermons-nl.php:394
+#: sermons-nl.php:433
 msgid ""
 "These events have more than one items of the same type. Open the event to "
 "unlink one of the items. You can find the unlinked items in the "
@@ -119,68 +133,77 @@ msgstr ""
 "een van de items los te koppelen. Je kunt de losgemaakte items vinden in het "
 "tab Administratie als je een nieuwe event wilt maken van dit item."
 
-#: sermons-nl.php:423
+#: sermons-nl.php:439 sermons-nl.php:690
+msgid "Date / time"
+msgstr "Datum / tijd"
+
+#: sermons-nl.php:442 sermons-nl.php:445 sermons-nl.php:448
+#, php-format
+msgid "Number of %s items"
+msgstr "Aantal %s events"
+
+#: sermons-nl.php:468
 msgid "Shortcode builder"
 msgstr "Shortcode-fabriek"
 
-#: sermons-nl.php:425
+#: sermons-nl.php:470
 msgid "Build a shortcode to insert the list of sermons to your page."
 msgstr ""
 "Maak een shortcode om een lijst met kerkdiensten op je pagina in te voegen."
 
-#: sermons-nl.php:427 sermons-nl.php:648 sermons-nl.php:694 sermons-nl.php:723
+#: sermons-nl.php:472 sermons-nl.php:703 sermons-nl.php:749 sermons-nl.php:778
 msgid "Click to copy the shortcode"
 msgstr "Klik om de shortcode te kopieren"
 
-#: sermons-nl.php:434
+#: sermons-nl.php:479
 msgid "Selection method"
 msgstr "Selectiemethode"
 
-#: sermons-nl.php:437
+#: sermons-nl.php:482
 msgid "Start and end date"
 msgstr "Begin- en einddatum"
 
-#: sermons-nl.php:438
+#: sermons-nl.php:483
 msgid "Fixed number from start date"
 msgstr "Vast aantal vanaf de begindatum"
 
-#: sermons-nl.php:439
+#: sermons-nl.php:484
 msgid "Fixed number back from end date"
 msgstr "Vast aantal terug vanaf de einddatum"
 
-#: sermons-nl.php:444
+#: sermons-nl.php:489
 msgid "Start date"
 msgstr "Begindatum"
 
-#: sermons-nl.php:448
+#: sermons-nl.php:493
 msgid "End date"
 msgstr "Einddatum"
 
-#: sermons-nl.php:452
+#: sermons-nl.php:497
 msgid "Number of events"
 msgstr "Aantal events"
 
-#: sermons-nl.php:456
+#: sermons-nl.php:501
 msgid "Date format"
 msgstr "Datumnotatie"
 
-#: sermons-nl.php:460
+#: sermons-nl.php:505
 msgid "Buttons"
 msgstr "Knoppen"
 
-#: sermons-nl.php:461
+#: sermons-nl.php:506
 msgid "Include buttons to load earlier and later sermons"
 msgstr "Voeg knoppen toe om eerdere en latere diensten te laden"
 
-#: sermons-nl.php:464 sermons-nl.php:1588
+#: sermons-nl.php:509 sermons-nl.php:1692
 msgid "Sermons-NL logo"
-msgstr "Sermons-NL logo"
+msgstr "Kerkdiensten-NL logo"
 
-#: sermons-nl.php:465
+#: sermons-nl.php:510
 msgid "Display the Sermons-NL logo next to obligatory logos."
-msgstr "Geef het Sermons-NL logo weer naast de verplichte logo's."
+msgstr "Geef het Kerkdiensten-NL logo weer naast de verplichte logo's."
 
-#: sermons-nl.php:470
+#: sermons-nl.php:516
 #, php-format
 msgid ""
 "For start and end date, you can enter any text that can be interpreted as a "
@@ -189,7 +212,7 @@ msgstr ""
 "Voor begin- en einddatum kun je elke tekst invoeren die kan worden "
 "geinterpreteerd als datum op basis van ondersteunde %s notaties."
 
-#: sermons-nl.php:473
+#: sermons-nl.php:520
 #, php-format
 msgid ""
 "The date format, that is used for printing the sermon dates can be either "
@@ -201,200 +224,263 @@ msgstr ""
 "of korte datumnotatie gevolgd door uren en minuten) of een geschikte datum-"
 "tijd notatie, zie %s."
 
-#: sermons-nl.php:476
+#: sermons-nl.php:523
 msgid ""
-"The Sermons-NL logo will be displayed next to the (anyway obligatory) logos "
-"of services that are used. Thank you if you keep this checked to help others "
+"The Sermons-NL logo will be displayed next to the obligatory logos of the "
+"services that are used. Thank you if you switch this on, it will help others "
 "find the plugin!"
 msgstr ""
-"Het Sermons-NL logo wordt weergegeven naast de (sowieso verplichte) logo's "
-"van de diensten die worden gebruikt. Dank je wel als je dit aangevinkt laat, "
-"zodat anderen de plugin kunnen vinden!"
+"Het Kerkdiensten-NL logo wordt weergegeven naast de verplichte logo's van de "
+"diensten die worden gebruikt. Dank je wel als je dit aangevinkt laat, zodat "
+"anderen de plugin kunnen vinden!"
 
-#: sermons-nl.php:481
+#: sermons-nl.php:528
 msgid "Frequently asked questions"
 msgstr "Veelgestelde vragen"
 
-#: sermons-nl.php:508
+#: sermons-nl.php:555
 msgid "Manage church service calendar and broadcasts"
 msgstr "Beheer kerkdienstenagenda en uitzendingen"
 
-#: sermons-nl.php:510
+#: sermons-nl.php:557
 msgid "Previous month"
 msgstr "Vorige maand"
 
-#: sermons-nl.php:511
+#: sermons-nl.php:558
 msgid "Next month"
 msgstr "Volgende maand"
 
-#: sermons-nl.php:512 sermons-nl.php:618
+#: sermons-nl.php:559 sermons-nl.php:673
 msgid "Unlinked items"
 msgstr "Losgemaakte items"
 
-#: sermons-nl.php:513 sermons-nl.php:678
+#: sermons-nl.php:560 sermons-nl.php:733
 msgid "Create new event"
 msgstr "Maak een nieuw event"
 
-#: sermons-nl.php:554
+#: sermons-nl.php:604
 msgid "No records found."
 msgstr "Geen regels gevonden."
 
-#: sermons-nl.php:562
+#: sermons-nl.php:612
 msgid "Date"
 msgstr "Datum"
 
-#: sermons-nl.php:563
+#: sermons-nl.php:613
 msgid "Pastor"
 msgstr "Voorganger"
 
-#: sermons-nl.php:564
+#: sermons-nl.php:614
 msgid "Items"
 msgstr "Items"
 
-#: sermons-nl.php:571
+#: sermons-nl.php:621
 msgid "Not included"
 msgstr "Niet ingesloten"
 
-#: sermons-nl.php:572
+#: sermons-nl.php:622
 msgid "Protected"
 msgstr "Beschermd"
 
-#: sermons-nl.php:575
+#: sermons-nl.php:625
 msgid "Uses Kerktijden source"
 msgstr "Gebruikt bron Kerktijden"
 
-#: sermons-nl.php:576
+#: sermons-nl.php:626
 msgid "Uses Kerkomroep source"
 msgstr "Gebruikt bron Kerkomroep"
 
-#: sermons-nl.php:577
+#: sermons-nl.php:627
 msgid "Uses YouTube source"
 msgstr "Gebruikt bron YouTube"
 
-#: sermons-nl.php:595
+#: sermons-nl.php:650
 msgid "Cancel"
 msgstr "Annuleren"
 
-#: sermons-nl.php:615
+#: sermons-nl.php:670
 msgid "Close"
 msgstr "Sluiten"
 
-#: sermons-nl.php:634
+#: sermons-nl.php:675
+msgid "Items not linked to an event will not be shown in the sermons listing."
+msgstr ""
+"Items die niet aan een event gelinkt zijn, worden niet in de lijst met "
+"diensten weergegeven."
+
+#: sermons-nl.php:676
+msgid ""
+"Link the item to an existing event by clicking the date or create a new one."
+msgstr ""
+"Link de items aan een bestaande event door op de datum te klikken, of maak "
+"een nieuwe event aan."
+
+#: sermons-nl.php:677
+msgid "For new events, the date and time of the linked item is used."
+msgstr ""
+"Voor nieuwe events worden de datum en tijd van het gelinkte item gebruikt."
+
+#: sermons-nl.php:678
+msgid "Or copy the shortcode for adding the single item to your website."
+msgstr "Of kopieer de shortcode om een los item aan je website toe te voegen."
+
+#: sermons-nl.php:682
+msgid "There are no unlinked items."
+msgstr "Er zijn geen losgekoppelde items."
+
+#: sermons-nl.php:689
 msgid "Type"
 msgstr "Type"
 
-#: sermons-nl.php:635
-msgid "Date / time"
-msgstr "Datum / tijd"
-
-#: sermons-nl.php:636
+#: sermons-nl.php:691
 msgid "Actions"
 msgstr "Acties"
 
-#: sermons-nl.php:659
+#: sermons-nl.php:714
 msgid "Link to event"
 msgstr "Aan event koppelen"
 
-#: sermons-nl.php:663
+#: sermons-nl.php:719
 msgid "No existing event on this date"
 msgstr "Er is geen bestaande event op deze datum"
 
-#: sermons-nl.php:696
+#: sermons-nl.php:751
 msgid "Copy event shortcode"
 msgstr "Kopieer de event shortcode"
 
-#: sermons-nl.php:706
+#: sermons-nl.php:761
 msgid "This event has no linked items."
 msgstr "Deze event heeft geen gekoppelde items."
 
-#: sermons-nl.php:707
+#: sermons-nl.php:762
 msgid "Are you sure you want to delete this event?"
 msgstr "Weet je zeker dat je deze event wilt verwijderen?"
 
-#: sermons-nl.php:707
+#: sermons-nl.php:762
 msgid "Delete event"
 msgstr "Verwijder event"
 
-#: sermons-nl.php:713
+#: sermons-nl.php:768
 msgid "This event has the following linked items:"
 msgstr "Deze event heeft de volgende gekoppelde items:"
 
-#: sermons-nl.php:733
+#: sermons-nl.php:788
 msgid "Unlink item"
 msgstr "Item loskoppelen"
 
-#: sermons-nl.php:763
+#: sermons-nl.php:818
 msgid "Event settings"
 msgstr "Event instellingen"
 
-#: sermons-nl.php:764
+#: sermons-nl.php:819
 msgid "Save settings"
 msgstr "Instellingen opslaan"
 
-#: sermons-nl.php:767
+#: sermons-nl.php:822
 msgid "Select date-time from"
 msgstr "Selecteer datum-tijd uit"
 
-#: sermons-nl.php:785
+#: sermons-nl.php:840
 msgid "Select sermon type from"
 msgstr "Selecteer type kerkdienst uit"
 
-#: sermons-nl.php:797
+#: sermons-nl.php:852
 msgid "Select pastor name from"
 msgstr "Selecteer naam voorganger uit"
 
-#: sermons-nl.php:809
+#: sermons-nl.php:864
 msgid "Select description from"
 msgstr "Selecteer omschrijving uit"
 
-#: sermons-nl.php:821
+#: sermons-nl.php:876
 msgid "Other settings"
 msgstr "Overige instellingen"
 
-#: sermons-nl.php:877
+#: sermons-nl.php:885
+msgid ""
+"If auto is selected or if an item is selected that has no date-time, the "
+"order of picking the date-time is (based on availability): kerktijden, "
+"youtube (if it has a planned date), kerkomroep, youtube (if it has been "
+"broadcasted)."
+msgstr ""
+"Als auto geselecteerd is, of als een items geselecteerd is die geen datum-"
+"tijd heeft, is de volgorde voor het kiezen van de datum-tijd (op basis van "
+"beschikbaarheid): kerktijden, youtube (als er een geplande datum is), "
+"kerkomroep, youtube (als hij uitgezonden is)."
+
+#: sermons-nl.php:886
+msgid "If auto is selected, sermons type will be selected from kerktijden."
+msgstr ""
+"Als auto geselecteerd is, wordt het type dienst gekozen van kerktijden."
+
+#: sermons-nl.php:887
+msgid ""
+"If auto is selected, pastor name will be selected from kerktijden or "
+"kerkomroep (in this order based on availability)."
+msgstr ""
+"Als auto geselecteerd is, wordt de naam van de voorganger gekozen van "
+"kerktijden of kerkomroep (in deze volgorde op basis van beschikbaarheid)."
+
+#: sermons-nl.php:888
+msgid ""
+"If auto is selected, description will be selected from youtube or kerkomroep "
+"(in this order, based on availability)."
+msgstr ""
+"Als auto geselecteerd is, wordt de omschrijving geselecteerd van youtube of "
+"kerkomroep (in deze volgorde, op basis van beschikbaarheid)."
+
+#: sermons-nl.php:889
+msgid ""
+"Events that have no linked items are deleted over night. Tick this box to "
+"prevent that from happening."
+msgstr ""
+"Events die geen gekoppeld item hebben, worden in de nacht verwijderd. Zet "
+"deze optie aan om dat te voorkomen."
+
+#: sermons-nl.php:932
 msgid "An incorrect manual date is entered."
 msgstr "Een incorrecte handmatige datum is ingevuld."
 
-#: sermons-nl.php:881
+#: sermons-nl.php:937
 #, php-format
 msgid "Failed to save event settings: no event with id %d found."
 msgstr ""
 "Mislukt om event instellingen op te slaan: geen event met id %d gevonden."
 
-#: sermons-nl.php:888
+#: sermons-nl.php:944
 msgid ""
 "The manual date and time should not be out of the range of the linked items."
 msgstr ""
 "De handmatige datum en tijd mogen niet buiten de range van de gelinkte items "
 "liggen."
 
-#: sermons-nl.php:891
+#: sermons-nl.php:947
 msgid "A manual date must be set when the event has no linked items."
 msgstr ""
 "Een handmatige datum moet worden ingesteld als de event geen gekoppelde "
 "items heeft."
 
-#: sermons-nl.php:896
+#: sermons-nl.php:952
 msgid "When adding a new event, the date and time has to be set manually."
 msgstr ""
 "Bij het maken van een nieuwe event moeten datum en tijd handmatig worden "
 "ingesteld."
 
-#: sermons-nl.php:900
+#: sermons-nl.php:956
 msgid "Sorry, failed to create a new event due to an unknown error."
 msgstr ""
 "Sorry, het maken van een nieuwe event is mislukt door een onbekende fout."
 
-#: sermons-nl.php:1059
+#: sermons-nl.php:1115
 msgid "Settings for church services"
 msgstr "Instellingen voor kerkdiensten"
 
-#: sermons-nl.php:1076 sermons-nl.php:1110 sermons-nl.php:1191
+#: sermons-nl.php:1134 sermons-nl.php:1175 sermons-nl.php:1262
 #, php-format
 msgid "Enable %s"
 msgstr "%s inschakelen"
 
-#: sermons-nl.php:1079 sermons-nl.php:1113
+#: sermons-nl.php:1137 sermons-nl.php:1178
 msgid ""
 "The use of data from this tool on your own website is permitted, provided "
 "that the link and logo are provided. The plugin will add it for you, please "
@@ -404,11 +490,11 @@ msgstr ""
 "de link en het logo worden weergegeven. De plugin voegt deze voor je toe, "
 "verberg deze niet alsjeblieft."
 
-#: sermons-nl.php:1082
+#: sermons-nl.php:1140
 msgid "Kerktijden identifier"
 msgstr "Kerktijden ID-nummer"
 
-#: sermons-nl.php:1085
+#: sermons-nl.php:1144
 #, php-format
 msgid ""
 "Browse to your church's page on %s and copy the number from the url, e.g. "
@@ -417,29 +503,29 @@ msgstr ""
 "Browse naar de pagina van je kerk op %s en kopieer het nummer uit de link, "
 "bijv. 999 in deze figuur."
 
-#: sermons-nl.php:1092 sermons-nl.php:1213
+#: sermons-nl.php:1151 sermons-nl.php:1286
 msgid "Number of weeks back"
 msgstr "Aantal weken terug"
 
-#: sermons-nl.php:1093 sermons-nl.php:1214
+#: sermons-nl.php:1154 sermons-nl.php:1289
 #, php-format
 msgid "How many weeks to look back when loading the %s archive"
 msgstr "Hoeveel weken je wilt terugkijken bij het laden van het %s archief"
 
-#: sermons-nl.php:1098
+#: sermons-nl.php:1159
 msgid "Number of weeks ahead"
 msgstr "Aantal weken vooruit"
 
-#: sermons-nl.php:1099
+#: sermons-nl.php:1162
 #, php-format
 msgid "How many weeks ahead in time to load %s data"
 msgstr "Hoeveel weken  vooruit je gegevens van %s wilt laden"
 
-#: sermons-nl.php:1116
+#: sermons-nl.php:1181
 msgid "Mount point"
 msgstr "Koppelpunt"
 
-#: sermons-nl.php:1118
+#: sermons-nl.php:1185
 #, php-format
 msgid ""
 "Browse to your church's page on %s and copy the number from the end of the "
@@ -448,7 +534,7 @@ msgstr ""
 "Navigeer naar de pagina van je kerk op %s en kopieer het nummer uit het eind "
 "van de link, bijv. 99999 in deze figuur."
 
-#: sermons-nl.php:1194
+#: sermons-nl.php:1265
 msgid ""
 "Setting the channel may take a while depending on the number of available "
 "videos."
@@ -456,7 +542,7 @@ msgstr ""
 "Het instellen van het kanaal kan even duren afhankelijk van het aantal "
 "beschikbare video's."
 
-#: sermons-nl.php:1199
+#: sermons-nl.php:1270
 msgid ""
 "Browse to your church's YouTube channel and copy the youtube channel ID from "
 "the url."
@@ -464,16 +550,20 @@ msgstr ""
 "Navigeer naar het YouTubekanaal van je kerk en kopieer de YouTube channel ID "
 "uit de link."
 
-#: sermons-nl.php:1207
+#: sermons-nl.php:1280
 #, php-format
-msgid "Visit %s to learn how to obtain a YouTube api key."
-msgstr "Ga naar %s om te ontdekken hoe je een YouTube api key aanmaakt."
+msgid ""
+"Visit %1$sthe YouTube api developers guide%2$s to learn how to obtain a "
+"YouTube api key."
+msgstr ""
+"Ga naar %1$sde YouTube api developers handleiding%2$s om te ontdekken hoe je "
+"een YouTube api key aanmaakt."
 
-#: sermons-nl.php:1299
+#: sermons-nl.php:1374
 msgid "Successfully saved. "
 msgstr "Opslaan gelukt. "
 
-#: sermons-nl.php:1300
+#: sermons-nl.php:1375
 msgid ""
 "It may take some seconds before new data are loaded from the different "
 "archives. If data doesn't load as expected, check the log first."
@@ -482,11 +572,11 @@ msgstr ""
 "archieven geladen zijn. Als de data niet geladen wordt zoals verwacht, "
 "controleer dan eerst het logbestand."
 
-#: sermons-nl.php:1320
+#: sermons-nl.php:1397
 msgid "Log page"
 msgstr "Logbestand"
 
-#: sermons-nl.php:1321
+#: sermons-nl.php:1400
 #, php-format
 msgid ""
 "Updating data from the sources happens mostly during background processes. "
@@ -498,21 +588,29 @@ msgstr ""
 "logbestand met berichten van de update-functies van de afgelopen %d dagen "
 "gebruiken."
 
-#: sermons-nl.php:1327
+#: sermons-nl.php:1405
 msgid "There are no logged messages available."
 msgstr "Er zijn geen logberichten beschikbaar."
 
-#: sermons-nl.php:1466
+#: sermons-nl.php:1544
+msgid ""
+"Sermons-NL has not been configured yet. Please check the Sermons-NL "
+"configuration page in the WordPress dashboard."
+msgstr ""
+"Kerkiensten-NL is nog niet ingesteld. Ga a.u.b. naar de pagina Instellingen "
+"van Kerkdiensten-NL in het WordPress dashboard."
+
+#: sermons-nl.php:1553
 msgid "Error: Parameter `offset` is an invalid date string in the shortcode."
 msgstr ""
 "Fout: De parameter `offset` in de shortcode is een ongeldige datumnotatie."
 
-#: sermons-nl.php:1467
+#: sermons-nl.php:1554
 msgid "Error: Parameter `ending` is an invalid date string in the shortcode."
 msgstr ""
 "Fout: De parameter `ending` in de shortcode is een ongeldige datumnotatie."
 
-#: sermons-nl.php:1468
+#: sermons-nl.php:1555
 msgid ""
 "Error: At least one of the parameters `offset` and/or `ending` should be "
 "provided in the shortcode."
@@ -520,7 +618,7 @@ msgstr ""
 "Fout: Tenminste een van de parameters `offset` en/of `ending` moet gegeven "
 "worden in de shortcode."
 
-#: sermons-nl.php:1469
+#: sermons-nl.php:1556
 msgid ""
 "Error: If one of the parameters `offset` or `ending` is not provided in the "
 "shortcode, parameter `count` should be a positive number."
@@ -528,61 +626,64 @@ msgstr ""
 "Fout: Als een van de parameters `offset` of `ending` niet in de shortcode "
 "staat, moet de parameter `count` een positief getal zijn."
 
-#: sermons-nl.php:1520
+#: sermons-nl.php:1607
 msgid "Load earlier sermons"
 msgstr "Laad eerdere kerkdiensten"
 
-#: sermons-nl.php:1544
+#: sermons-nl.php:1631
 msgid "Load later sermons"
 msgstr "Laad latere kerkdiensten"
 
-#: sermons-nl.php:1568 sermons-nl.php:1571
+#: sermons-nl.php:1659 sermons-nl.php:1667
 #, php-format
 msgid "Open the %s website"
 msgstr "Open de %s website"
 
-#: sermons-nl.php:1574
+#: sermons-nl.php:1674
 msgid "Watch this video on YouTube"
 msgstr "Bekijk video op YouTube"
 
-#: sermons-nl.php:1577
+#: sermons-nl.php:1680
 msgid "Open the YouTube channel"
 msgstr "Open het YouTube-kanaal"
 
-#: sermons-nl.php:1581
+#: sermons-nl.php:1685
 msgid "Source:"
 msgstr "Bron:"
 
-#: sermons-nl.php:1588
+#: sermons-nl.php:1692
 msgid "Find out more about the Sermons-NL plugin"
-msgstr "Ondek meer over de Sermons-NL plugin"
+msgstr "Ondek meer over de Kerkdiensten-NL plugin"
 
-#: sermons-nl.php:1783
+#: sermons-nl.php:1891
 msgid "This sermon has been cancelled."
 msgstr "Deze dienst is geannuleerd."
 
-#: sermons-nl.php:1783
+#: sermons-nl.php:1891
 msgid "There are no broadcasts for this sermon."
 msgstr "Er zijn geen uitzendingen voor deze kerkdienst."
 
-#: sermons-nl.php:1970
+#: sermons-nl.php:2087
 #, php-format
 msgid "Listen to %s audio"
 msgstr "Luister naar %s audio"
 
-#: sermons-nl.php:1971 sermons-nl.php:1979 sermons-nl.php:2009
+#: sermons-nl.php:2088 sermons-nl.php:2098 sermons-nl.php:2130
 msgid "live"
 msgstr "live"
 
-#: sermons-nl.php:1978 sermons-nl.php:2008
+#: sermons-nl.php:2097 sermons-nl.php:2129
 #, php-format
 msgid "Watch %s video"
 msgstr "Bekijk %s video"
 
-#: sermons-nl.php:2009
+#: sermons-nl.php:2130
 msgid "planned"
 msgstr "gepland"
 
-#: sermons-nl.php:2013
+#: sermons-nl.php:2134
 msgid "Open video on YouTube"
 msgstr "Open video op YouTube"
+
+#~ msgid "Date/time"
+#~ msgstr "Datum/tijd"

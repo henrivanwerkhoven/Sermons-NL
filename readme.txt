@@ -1,29 +1,29 @@
-=== Sermons-NL: Bring Dutch church sermons together ===
+=== Sermons-NL ===
 Contributors: henrivanwerkhoven
 Donate link:
-Tags: sermons, church services, kerkdiensten, kerktijden, kerkomroep, youtube
+Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
 Tested up to: 6.8
 Stable tag: 0.1
-Requires PHP: 7.0
+Requires PHP: 7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-This Wordpress plugin brings together church sermon data from different sources that are being used by Dutch churches and presents them as a single overview on the website.
+This plugin brings together and nicely presents sermon data from Kerktijden.nl, Kerkomroep.nl and Youtube.com, frequently used by Dutch churches.
 
 == Description ==
 
-This Wordpress plugin brings together church sermon data from different sources that are being used by Dutch churches and presents them as a single overview on the website.
+This Wordpress plugin brings together church sermon data from different sources that are being used by Dutch churches and presents them as a single overview. Intended to be used on a church's website to display planned and previously broadcasted sermons.
 
-The following services can be used:
+Services being used are:
 
-* Kerktijden.nl (this is a site from the Dutch newspaper Reformatorisch Dagblad that many churches use to list their planned sermons.)
-* Kerkomroep.nl (this is a site that is used for broadcasting church services, both audio and video depending on the church's licence.)
-* Youtube.com (this we know, many churches nowadays use this for video broadcasting their sermons.)
++ Kerktijden.nl: a website where churches can record their scheduled church services
++ Kerkomroep.nl: a website that churches use to audio and video broadcast their church services 
++ Youtube.com: a website that churches use to video broadcast their church services
 
-Sermons can also be entered manually, which can be useful for churches that don't use kerktijden.nl but want their planned and broadcasted sermons to be listed in one overview.
+Setting up the plugin is quite easy. After installation and activation, go to Sermons-NL > configuration in the WP dashboard and follow the instructions. Then go to Sermons-NL in the WP dashboard and use the shortcode builder. Copy the shortcode on a your website page to display the sermons according to your wish.
 
-The plugin will regularly check for updates from each service that you have configured and will automatically link items from one service to the other based on the date and time with some margin arround it. Manual entries can also be added, and (automatically) linked items can be rearranged if needed.
+If you have any suggestions for improvement, please feel free to visit the plugin website and post an issue.
 
 == Frequently Asked Questions ==
 
@@ -53,7 +53,7 @@ Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep
 
 = Wordpress is occasionally responding very slow since I am using Sermons-NL. What can I do about it? =
 
-Please check if you are using cron jobs. Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs.  The recommended frequency of cron jobs is once every 15 minutes. <a href="https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs/" target="_blank">Please refer to this instruction.</a> If you are already using cron jobs and it is correctly configured, it is unlikely that Sermons-NL is slowing down your website.
+Please check if you are using cron jobs. Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs.  The recommended frequency of cron jobs is once every 15 minutes. Please refer to https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs for instruction. If you are already using cron jobs and it is correctly configured, it is unlikely that Sermons-NL is slowing down your website.
 
 = I get [Sermons-NL invalid shortcode] on my site where a Sermons-NL shortcode was used =
 
@@ -65,7 +65,7 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 
 == Screenshots ==
 
-1. I don't have screenshots yet.
+
 
 == Changelog ==
 

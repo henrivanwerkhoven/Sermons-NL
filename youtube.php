@@ -50,7 +50,9 @@ class sermonsNL_youtube{
             }
         }
         if($update){
-            $wpdb->update($wpdb->prefix.'sermonsNL_youtube', $data, array('id' => $this->id));
+            $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prefix.'sermonsNL_youtube', $data, array('id' => $this->id)
+			);
             return true;
         }
         return false;
@@ -58,7 +60,8 @@ class sermonsNL_youtube{
     
     public function delete(){
         global $wpdb;
-        $wpdb->delete($wpdb->prefix.'sermonsNL_youtube', array('id' => $this->id));
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete($wpdb->prefix.'sermonsNL_youtube', array('id' => $this->id));
         unset(self::$items[$this->id]);
     }
 	
@@ -66,7 +69,8 @@ class sermonsNL_youtube{
 	    if(self::$items === null){
 	        self::$items = array();
     	    global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube ORDER BY dt_actual,dt_planned", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube ORDER BY dt_actual,dt_planned", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	            self::$items_by_video_id[$object->video_id] = self::$items[$id];
@@ -80,7 +84,8 @@ class sermonsNL_youtube{
 	    $items = self::get_all();
 	    if(!isset($items[$id])){
 	        global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube where id=$id", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube where id=%d", $id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -106,7 +111,8 @@ class sermonsNL_youtube{
 	
 	public static function get_all_by_event_id(int $event_id){
 	    global $wpdb;
-    	$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube WHERE event_id=$event_id");
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube WHERE event_id=%d",$event_id));
     	$ret = array();
     	foreach($data as $row){
     	    $ret[] = self::get_by_id($row->id);
@@ -116,7 +122,8 @@ class sermonsNL_youtube{
 	
 	public static function get_live(){
 	    global $wpdb;
-	    $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where live=1", ARRAY_A);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where live=1", ARRAY_A);
 	    if(empty($data)){
 	        return null;
 	    }
@@ -125,7 +132,8 @@ class sermonsNL_youtube{
 	
 	public static function get_planned(bool $include_all = false){
 	    global $wpdb;
-	    $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where planned=1", ARRAY_A);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where planned=1", ARRAY_A);
 	    if($include_all){
 	        $ret = array();
 	        foreach($data as $row){
@@ -141,7 +149,8 @@ class sermonsNL_youtube{
 
 	public static function add_record($data){
 	    global $wpdb;
-	    $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_youtube', $data);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ok = $wpdb->insert($wpdb->prefix.'sermonsNL_youtube', $data);
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -158,7 +167,7 @@ class sermonsNL_youtube{
         dt_actual datetime NULL,
         dt_end datetime NULL,
         title varchar(255) DEFAULT '' NOT NULL,
-        description text DEFAULT '' NOT NULL,
+        description text NOT NULL,
         planned tinyint(1) DEFAULT 0 NOT NULL,
         live tinyint(1) DEFAULT 0 NOT NULL,
         PRIMARY KEY  (id)
@@ -167,7 +176,7 @@ class sermonsNL_youtube{
 	
     // METHODS TO LOAD NEW DATA FROM youtube.com
     
-    public static function get_remote_data(int $n_records=null){
+    public static function get_remote_data(?int $n_records=null){
         $data = self::get_remote_search($n_records === null ? INF : $n_records);
 		if($data === false) return false; // get_remote_search has logged the error
         $ok = self::compare_remote_to_local_data($data);
@@ -386,6 +395,8 @@ class sermonsNL_youtube{
 	}
 
 	private static function load_googleapis_url($path){
+		/* load data from the youtube api using php naive functions for writing to and reading from an ssl socket */
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen
 		$fp = fsockopen("ssl://www.googleapis.com", 443, $error_code, $error_message);
 		if(!$fp){
 			sermonsNL::log(__CLASS__."::load_googleapis_url", "Could not connect to youtube api: $error_message (#$error_code)");
@@ -393,6 +404,7 @@ class sermonsNL_youtube{
 		$out = "GET $path HTTP/1.1\r\n";
 		$out .= "Host: www.googleapis.com\r\n";
 		$out .= "Connection: Close\r\n\r\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 		fwrite($fp, $out);
 
 		// read headers
@@ -418,6 +430,7 @@ class sermonsNL_youtube{
 					$chunksize = hexdec(trim($line));
 				}elseif($chunksize > 0){
 					$readsize = min(512, $chunksize);
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
 					$content .= fread($fp, $readsize);
 					$chunksize -= $readsize;
 					if($chunksize <= 0){
@@ -434,6 +447,7 @@ class sermonsNL_youtube{
 				if($line !== false) $content .= $line;
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		fclose($fp);
 		// error handling
 		if(empty($content)){

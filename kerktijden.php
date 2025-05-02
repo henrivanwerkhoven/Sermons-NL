@@ -60,7 +60,8 @@ class sermonsNL_kerktijden{
             }
         }
         if($update){
-            $wpdb->update($wpdb->prefix.'sermonsNL_kerktijden', $data, array('id' => $this->id));
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update($wpdb->prefix.'sermonsNL_kerktijden', $data, array('id' => $this->id));
             return true;
         }
         return false;
@@ -68,7 +69,8 @@ class sermonsNL_kerktijden{
     
     public function delete(){
         global $wpdb;
-        $wpdb->delete($wpdb->prefix.'sermonsNL_kerktijden', array('id' => $this->id));
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete($wpdb->prefix.'sermonsNL_kerktijden', array('id' => $this->id));
         unset(self::$items[$this->id]);
     }
 	
@@ -76,7 +78,8 @@ class sermonsNL_kerktijden{
 	    if(self::$items === null){
 	        self::$items = array();
     	    global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden ORDER BY dt", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden ORDER BY dt", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	            if($object->event_id) self::$items_by_event[$object->event_id] = self::$items[$id];
@@ -89,7 +92,8 @@ class sermonsNL_kerktijden{
 	    $kt = self::get_all();
 	    if(!isset($kt[$id])){
 	        global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden where id=$id", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden where id=%d",$id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -108,7 +112,8 @@ class sermonsNL_kerktijden{
 	
 	public static function get_all_by_event_id(int $event_id){
 	    global $wpdb;
-    	$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE event_id=$event_id");
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE event_id=%d",$event_id));
     	$ret = array();
     	foreach($data as $row){
     	    $ret[] = self::get_by_id($row->id);
@@ -123,7 +128,8 @@ class sermonsNL_kerktijden{
     	    sermonsNL_kerktijdenpastors::add_if_not_exists(array('id'=>$data['pastor_id'], 'pastor'=>$data['pastor']));
 	    }
 	    unset($data['pastor']);
-	    $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_kerktijden', $data);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ok = $wpdb->insert($wpdb->prefix.'sermonsNL_kerktijden', $data);
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -134,12 +140,18 @@ class sermonsNL_kerktijden{
 	// except for datetime stamps in the array dt_list (formatted as yyyy-mm-dd hh:ii:ss)
 	public static function delete_remotely_nonexisting_items($date_min, $date_max, $dt_list){
 		if($date_min > $date_max) return null;
+		if(!is_array($dt_list)) return null;
 		global $wpdb;
-		$q = "DELETE FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE dt >= \"{$date_min} 00:00:00\" AND dt <= \"{$date_max} 23:59:59\"";
+		$q = "DELETE FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE dt >= %s AND dt <= %s";
 		foreach($dt_list as $dt_existing){
-			$q .= " AND dt != \"{$dt_existing}\"";
+			$q .= " AND dt != %s";
 		}
-		$wpdb->query($q);
+		$values = array_merge(array(sprintf("%s 00:00:00",$date_min),sprintf("%s 23:59:59",$date_max)), $dt_list);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->prepare($q,$values)
+		);
 	}
 	
 	public static function query_create_table($prefix, $charset_collate){
@@ -176,7 +188,7 @@ class sermonsNL_kerktijden{
 	    $months = ceil($weeks / 13 * 3);
 		$data = array();
 		for($m=0; $m<=$months; $m++){
-			$month = date('Y-m-d', strtotime("first day of -$m month"));
+			$month = gmdate('Y-m-d', strtotime("first day of -$m month"));
 			$url = "https://api.kerktijden.nl/api/gathering/GetGatherings?communityId=" . $kt_id . "&month=" . $month;
 			$data_m = self::get_remote_data($url);
 			if(false === $data_m){
@@ -273,7 +285,8 @@ class sermonsNL_kerktijdenpastors{
         if($data['pastor'] != $this->pastor || $data['town'] != $this->town){
             global $wpdb;
             // change pastor or town
-            $wpdb->update($wpdb->prefix.'sermonsNL_kerktijdenpastors', $data, array('id' => $this->id));
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update($wpdb->prefix.'sermonsNL_kerktijdenpastors', $data, array('id' => $this->id));
             $this->pastor = $data['pastor'];
     	    $this->town = $data['town'];
         }
@@ -283,7 +296,8 @@ class sermonsNL_kerktijdenpastors{
 	    if(self::$items === null){
 	        self::$items = array();
     	    global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	        }
@@ -295,7 +309,8 @@ class sermonsNL_kerktijdenpastors{
 	    $pastors = self::get_all();
 	    if(!isset($pastors[$id])){
 	        global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors where id=$id", OBJECT_K);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors where id=%d",$id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -314,7 +329,8 @@ class sermonsNL_kerktijdenpastors{
 	
 	public static function add_record($data){
 	    global $wpdb;
-	    $ok = $wpdb->insert($wpdb->prefix."sermonsNL_kerktijdenpastors", $data);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ok = $wpdb->insert($wpdb->prefix."sermonsNL_kerktijdenpastors", $data);
 	    if($ok){
 	        return self::get_by_id($data['id']);
 	    }
@@ -336,9 +352,11 @@ class sermonsNL_kerktijdenpastors{
 	    $kt_id = get_option('sermonsNL_kerktijden_id');
 	    // delete pastors that are not linked to a sermon
 	    global $wpdb;
-	    $data = $wpdb->get_results("SELECT p.id FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors AS p LEFT JOIN {$wpdb->prefix}sermonsNL_kerktijden AS k ON k.pastor_id = p.id WHERE k.pastor_id IS NULL;", ARRAY_A);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$data = $wpdb->get_results("SELECT p.id FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors AS p LEFT JOIN {$wpdb->prefix}sermonsNL_kerktijden AS k ON k.pastor_id = p.id WHERE k.pastor_id IS NULL;", ARRAY_A);
 	    foreach($data as $row){
-	        $wpdb->delete($wpdb->prefix . "sermonsNL_kerktijdenpastors", array('id' => $row['id']));
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete($wpdb->prefix . "sermonsNL_kerktijdenpastors", array('id' => $row['id']));
 	        // in case self::$items is alraedy defined, this avoid an attemt to next try to update a non-existing record
 	        unset(self::$items[$row['id']]); 
 	    }

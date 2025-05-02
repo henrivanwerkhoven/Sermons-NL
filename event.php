@@ -67,6 +67,7 @@ class sermonsNL_event{
             }
         }
         if($update){
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
             $wpdb->update($wpdb->prefix.'sermonsNL_events', $data, array('id' => $this->id));
             return true;
         }
@@ -82,6 +83,7 @@ class sermonsNL_event{
     
     public function delete(){
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $wpdb->delete($wpdb->prefix.'sermonsNL_events', array('id' => $this->id));
         unset(self::$events[$this->id]);
     }
@@ -101,7 +103,8 @@ class sermonsNL_event{
 	    if(self::$events === null){
 	        self::$events = array();
     	    global $wpdb;
-	        $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events ORDER BY dt_min", OBJECT_K);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events ORDER BY dt_min", OBJECT_K);
 	        foreach($data as $key => $object){
 	            self::$events[$key] = new self($object);
 	        }
@@ -113,7 +116,8 @@ class sermonsNL_event{
 	    $events = self::get_all();
 	    if(!isset($events[$id])){
 	        global $wpdb;
-	        $record = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events where id=$id", OBJECT_K);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $record = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_events where id=%d", $id), OBJECT_K);
 	        if(empty($record)){
 	            return null;
 	        }
@@ -125,7 +129,8 @@ class sermonsNL_event{
 	public static function get_by_dt(string $dt, ?string $dt2=null, bool $include_all=false){
 	    global $wpdb;
 	    if(null === $dt2) $dt2 = $dt;
-	    $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_events WHERE dt_min <= '$dt2' AND dt_max >= '$dt'", ARRAY_A);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermonsNL_events WHERE dt_min<=%s AND dt_max>=%s", $dt2, $dt), ARRAY_A);
 	    if(empty($data)) return null;
 	    if($include_all){
 	        $ret = array();
@@ -140,7 +145,8 @@ class sermonsNL_event{
 	public static function add_record(string $dt, ?string $dt2=null){
 	    global $wpdb;
 	    if($dt2 === null) $dt2 = $dt;
-	    $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_events', array('dt_min'=>$dt, 'dt_max'=>$dt2));
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_events', array('dt_min'=>$dt, 'dt_max'=>$dt2));
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
