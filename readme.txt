@@ -4,7 +4,7 @@ Donate link:
 Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
 Tested up to: 6.8
-Stable tag: 0.1
+Stable tag: 0.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -21,7 +21,15 @@ Services being used are:
 + Kerkomroep.nl: a website that churches use to audio and video broadcast their church services 
 + Youtube.com: a website that churches use to video broadcast their church services
 
-Setting up the plugin is quite easy. After installation and activation, go to Sermons-NL > configuration in the WP dashboard and follow the instructions. Then go to Sermons-NL in the WP dashboard and use the shortcode builder. Copy the shortcode on a your website page to display the sermons according to your wish.
+Setting up the plugin is quite easy. After installation and activation, go to Sermons-NL > configuration in the WP dashboard and follow the instructions. Then go to Sermons-NL in the WP dashboard and use the shortcode builder. Copy the shortcode on a website page or in a post to display the sermons. You can also display a single sermon or one broadcasted item, which can be useful in posts about a specific event; get the shortcode for this from the administration menu.
+
+Kerktijden allows church websites to retrieve data from their own church from kerktijden.nl in order to publish the on their own website, provided that (1) the logo of kerktijden must be visible and (2) the url to kerktijden.nl must be visible. The plugin will automatically add an logo with url when data from kerktijden is presented. (See https://www.kerktijden.nl/service/veelgestelde-vragen/ - in Dutch, accessed 09-May-2025.)
+
+Kerkomroep also allows churches to present their own broadcasted sermons on their website provided that Kerkomroep is acknowledged. For consistency, the same approach is chosen to display the logo and url when kerkomroep data is shown.
+
+For YouTube broadcasts, the YouTube Data API is used, see https://developers.google.com/youtube/v3/docs for documentation. Although formally not needed, for consistency the plugin takes the same approach with displaying the logo and url to acknowledge the use of this source.
+
+The website administrator has the option to enable the Sermons-NL logo, which will then be shown next to the other logo(s). By default this is switched off.
 
 If you have any suggestions for improvement, please feel free to visit the plugin website and post an issue.
 
@@ -72,7 +80,15 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 = 0.1 =
 * First release.
 
+= 0.2 =
+* Use of _POST and _GET input optimized
+* Bug fix: page refresh required after resolving issue in plugin dashboard
+* Bug fix: kerkomroep live broadcast can be deleted when no longer broadcasting
+
 == Upgrade Notice ==
 
 = 0.1 =
-First release.
+First release for review by Wordpress team.
+
+= 0.2 =
+Optimization following automated plugin review by Wordpress, and two bugs were fixed.

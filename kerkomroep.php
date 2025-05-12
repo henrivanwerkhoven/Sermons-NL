@@ -1,5 +1,7 @@
 <?php
 
+if(!defined('ABSPATH')) exit; // Exit if accessed directly
+
 class sermonsNL_kerkomroep{
     
     // DATA OBJECT METHODS
@@ -37,6 +39,7 @@ class sermonsNL_kerkomroep{
         global $wpdb;
         $update = false;
         foreach($data as $key => $value){
+            if($key == 'id') continue;
             if(array_key_exists($key, $this->data)){
                 if($this->$key != $value){
                     $update = true;
@@ -130,7 +133,14 @@ class sermonsNL_kerkomroep{
 	    return null;
 	}
 	
-	public static function query_create_table($prefix, $charset_collate){
+	private function validate_remote_urls(){
+        if($this->live) return true; // do not check here whether still live
+        $audio_url_valid = ($this->audio_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($this->audio_url)[0]));
+        $video_url_valid = ($this->video_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($this->video_url)[0]));
+        return ($audio_url_valid || $video_url_valid);
+    }
+
+    public static function query_create_table($prefix, $charset_collate){
 	    return "CREATE TABLE {$prefix}sermonsNL_kerkomroep (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
         event_id int(10) UNSIGNED NULL,
@@ -157,7 +167,7 @@ class sermonsNL_kerkomroep{
 		$port = 443;
 		$protocol = 'ssl://';
 
-        /* load data from the kerktijden api using php naive functions for writing to and reading from an ssl socket */
+        /* load data from the kerktijden api using native php functions for writing to and reading from an ssl socket */
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen
         $fp = fsockopen($protocol . $host, $port, $errno, $errstr, 30);
 		if(!$fp){
@@ -250,17 +260,6 @@ class sermonsNL_kerkomroep{
     }
     */
 
-    public static function validate_remote_urls(){
-        $items = self::get_all();
-        foreach($items as $item){
-            if(!$item->live){
-                $audio_valid = ($item->audio_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($item->audio_url)[0]));
-                $video_valid = ($item->video_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($item->video_url)[0]));
-                if(!$audio_valid && !$video_valid) $item->delete();
-            }
-        }
-    }
-    
     public static function get_remote_data($check_live_only=false){
         $mp = get_option("sermonsNL_kerkomroep_mountpoint");
         
@@ -276,8 +275,11 @@ class sermonsNL_kerkomroep{
         if($check_live_only){
             return self::compare_live_broadcast($data[0]);
         }else{
+            // if first remote item is not live but we still have a live broadcast locally, we need to fix that
+            // (it the remote is live, compare_remote_to_local_data will call this function)
             if(!$data[0]->is_live && self::get_live()) self::compare_live_broadcast($data[0]);
-            return self::compare_remote_to_local_data($data);
+            // now compare all remote items to the local items
+            return self::compare_remote_to_local_data($data, true);
         }
     }
 
@@ -285,15 +287,15 @@ class sermonsNL_kerkomroep{
     public static function compare_live_broadcast($remote_item){
         $item = self::get_live(); // live item from database
         if((int)$remote_item->is_live){
-            $now = new DateTime('now', sermonsNL::$timezone_db);
             // currently broadcasting
+            $now = new DateTime('now', sermonsNL::$timezone_db);
             if($item !== null){
-                // update item
+                // live broadcast already existing in database, update item
                 $item_dt = new DateTime($item->dt, sermonsNL::$timezone_db);
-                $item->duration = $now->getTimestamp() - $item_dt->getTimestamp();
+                $item->duration = $now->getTimestamp() - $item_dt->getTimestamp(); // seconds
                 if($item->event) $item->event->update_dt_min_max($item->dt, $item->dt_end);
             }else{
-                // create new live item
+                // create new live broadcasting item
                 $new_data = array(
                     'dt' => $now->format("Y-m-d H:i:s"),
                     'duration' => 0,
@@ -304,32 +306,37 @@ class sermonsNL_kerkomroep{
                     'live' => 1
                 );
                 $item = self::add_record($new_data);
-                // allow linking of the live event, even if the broadcasting starts one hour ahead or if it is detected up to 30 minutes later
+                // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
                 $event = sermonsNL_event::get_by_dt(
-                    $now->sub(new DateInterval('PT30M'))->format("Y-m-d H:i:s"), 
-                    $now->add(new DateInterval('PT90M'))->format("Y-m-d H:i:s") // NB: +90 because previous line modified object
+                    (clone $now)->sub(new DateInterval('PT30M'))->format("Y-m-d H:i:s"),
+                    (clone $now)->add(new DateInterval('PT60M'))->format("Y-m-d H:i:s")
                 );
                 if(null === $event){
-                   $event = sermonsNL_event::add_record($item->dt, $item->dt_end);
+                    $event = sermonsNL_event::add_record($item->dt, $item->dt_end);
                 }else{
                     // dt_min and dt_max of the event may need update
                     $event->update_dt_min_max($item->dt, $item->dt_end);
                 }
-                // attach the event to the kerkomroep item
+                // attach the kerkomroep item to the event
                 $item->update(array('event_id' => $event->id));
+                sermonsNL::log("sermonsNL_kerkomroep::compare_live_broadcast","New live broadcasting item added.");
             }
         }else{
             if($item !== null){
-                // live broadcast no longer available. Delete it. 
-                $item->update(array('audio_url' => null, 'video_url' => null, 'live' => 0));
+                // live broadcast is no longer available remotely but still exists locally. Delete it. The broadcast will later be added from the archive.
+                sermonsNL::log("sermonsNL_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted.");
+                $item->delete();
             }
-            // check if $remote_item exists
-            self::compare_remote_to_local_data(array($remote_item));
+            // check if $remote_item already exists; this could be the (yet unsaved) broadcasted item
+            self::compare_remote_to_local_data(array($remote_item), false);
         }
     }
     
-    private static function compare_remote_to_local_data($remote_data){
+    private static function compare_remote_to_local_data($remote_data, $delete_if_not_exists=true){
+        // protect the local data from getting an empty record (maybe connection error)
+        if(empty($remote_data)) return false;
 	    $local_data = self::get_all();
+        $found_items = array();
 	    // loop through remote data array
 	    $prev_item = null;
 	    $DI15m = new DateInterval("PT15M");
@@ -340,9 +347,15 @@ class sermonsNL_kerkomroep{
             }
             $dt = new DateTime($remote_item->datum . ' ' . $remote_item->tijd, sermonsNL::$timezone_ko);
             $dt->setTimeZone(sermonsNL::$timezone_db);
+            $duration = (int)$remote_item->tijdsduur; // duration in seconds
+            global $dt_range; // $dt_range is used for matching with local data
+            $dt_range = array(
+                $dt->format("Y-m-d H:i:s"),
+                (clone $dt)->add(new DateInterval("PT{$duration}S"))->format("Y-m-d H:i:s")
+            );
             $new_data = array(
-                'dt' => $dt->format("Y-m-d H:i:s"), 
-                'duration' => (int)$remote_item->tijdsduur, 
+                'dt' => $dt->format("Y-m-d H:i:s"),
+                'duration' => $duration,
                 'pastor' => (string)$remote_item->voorganger, 
                 'theme' => (string)$remote_item->thema,
                 'scripture' => (string)$remote_item->schriftlezing,
@@ -360,14 +373,15 @@ class sermonsNL_kerkomroep{
                 $new_data['duration'] = strtotime($prev_item->dt) - strtotime($new_data['dt']) - 1;
             }
 
-            // we have a match if the start time is within the interval of start and start+duration of the existing record. This is because the start of the broadcast can be trimmed later.
-            global $dt; $dt = $new_data['dt'];
-            $i = array_search(true, array_map(function($item){ global $dt; return ($dt >= $item->dt && $dt <= $item->dt_end); }, $local_data));
+            // we have a match if the remote start time ($dt_range[0]) is smaller then the items end time and the remote end time ($dt_range[1]) is larger than the items start time.
+            // This is because the broadcast can be trimmed at both ends later.
+            // $i is the index of $local_data that matches the $new_data time slot, or false if there is no match
+            $i = array_search(true, array_map(function($item){ global $dt_range; return ($dt_range[1] >= $item->dt && $dt_range[0] <= $item->dt_end); }, $local_data));
             if(false === $i){
-                // it is new, create new record
+                // create new record
                 $item = self::add_record($new_data);
                 // check for existing events with matching / overlapping dt
-                // take some margin because the broadcast may have started earlier of be detected later
+                // take some margin because the broadcast may have started earlier or be detected later
                 $dt1 = (new DateTime($item->dt, sermonsNL::$timezone_db))->sub($DI15m)->format("Y-m-d H:i:s"); // margin for delayed start
                 $dt2 = (new DateTime($item->dt_end, sermonsNL::$timezone_db))->format("Y-m-d H:i:s"); // from the archive, a margin for early start is not needed
                 $event = sermonsNL_event::get_by_dt($dt1, $dt2);
@@ -379,19 +393,37 @@ class sermonsNL_kerkomroep{
                 }
                 // attach the event to the kerkomroep item
                 $item->update(array('event_id' => $event->id));
+                sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","New item {$item->dt} created.");
             }
             else{
                 // update record (the update function will check if an update is needed)
                 $item = $local_data[$i];
-                $item->update($new_data);
-                if($item->event){
+                $updated = $item->update($new_data);
+                if($updated && $item->event){
                     // dt_min and dt_max of the event may need update
                     $item->event->update_dt_min_max($item->dt, $item->dt_end);
                 }
+                if($updated) sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","Existing item {$item->dt} updated.");
+                // record which items are found
+                $found_items[] = $i;
             }
             $prev_item = $item;
         }
-        // to do: to delete (after checking url availability?) which items are to be deleted
+        // delete (if audio/video urls also not available) the items that were not found in the archive
+        if($delete_if_not_exists){
+            $not_found = array_diff(array_keys($local_data), $found_items);
+            sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","Found: ".print_r($found_items,true)."; Local: " . print_r(array_keys($local_data),true) . "; Not found: " . print_r($not_found,true));
+            foreach($not_found as $i){
+                $item = $local_data[$i];
+                if(!$item->validate_remote_urls()){
+                    sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","Item {$item->dt} no longer exists; item deleted.");
+                    $item->delete();
+                }else{
+                    sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","Item {$item->dt} not in archive but url is valid; item retained.");
+                }
+            }
+        }
+        // done
         return true;
 	}
     

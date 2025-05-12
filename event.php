@@ -1,5 +1,7 @@
 <?php
 
+if(!defined('ABSPATH')) exit; // Exit if accessed directly
+
 class sermonsNL_event{
     	// EVENT FUNCTIONS
 	

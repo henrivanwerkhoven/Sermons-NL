@@ -4,13 +4,15 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: 
 	Description: List planned and broadcasted Dutch church services in a convenient way
-	Version: 0.1
+	Version: 0.2
 	Author: Henri van Werkhoven
 	Author URI: https://github.com/henrivanwerkhoven/Sermons-NL
 	License: GPL2
 	Text Domain: sermons-nl
 	Domain Path: /languages
 */
+
+if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
 class sermonsNL{
 
@@ -34,9 +36,6 @@ class sermonsNL{
         "sermonsNL_kerktijden_weeksback"           => array('type' => 'integer', 'default' => 52),
         "sermonsNL_kerktijden_weeksahead"          => array('type' => 'integer', 'default' => 52),
         "sermonsNL_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
-        //"sermonsNL_kerkdienstgemist_rssid"         => array('type' => 'integer', 'default' => null),
-        //"sermonsNL_kerkdienstgemist_audiostreamid" => array('type' => 'integer', 'default' => null),
-        //"sermonsNL_kerkdienstgemist_videostreamid" => array('type' => 'integer', 'default' => null),
         "sermonsNL_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermonsNL_youtube_key"                    => array('type' => 'string',  'default' => null),
 		"sermonsNL_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
@@ -302,7 +301,7 @@ class sermonsNL{
 		$done = array();
 
 		if(isset($_GET['resources'])){
-			$resources = explode(",", filter_input(INPUT_GET, 'resources'));
+			$resources = explode(",", sanitize_text_field(filter_input(INPUT_GET, 'resources')));
 
 			// load kerktijden archive
 			if(array_search('kt', $resources) !== false){
@@ -324,7 +323,7 @@ class sermonsNL{
 			}
 		}
 
-		print json_encode(array('action' => 'sermonsNL_get_remote_data_in_background', 'done' => $done));
+		print wp_json_encode(array('action' => 'sermonsNL_get_remote_data_in_background', 'done' => $done));
 		wp_die();
 	}
 
@@ -340,8 +339,8 @@ class sermonsNL{
 
 	public static function add_admin_scripts_and_styles($hook){
 	    if(strpos($hook,'sermons-nl') === false) return;
-	    wp_enqueue_style('sermonsNL-admin-css', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.1.1');
-		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.1.1');
+	    wp_enqueue_style('sermonsNL-admin-css', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.2');
+		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.2', array('in_footer' => false));
 	}
 	
 	public static function add_admin_custom_script($hook){
@@ -433,7 +432,7 @@ class sermonsNL{
             		    ' . esc_html__("These events have more than one items of the same type. Open the event to unlink one of the items. You can find the unlinked items in the administration tab if you want to create a new event from this item.","sermons-nl") . '
     		        </p>
     		        <p>
-                		<table id="sermonsnl_events_table">'; //  class="wp-list-table widefat fixed striped pages"
+                		<table id="sermonsnl_issues_table">'; //  class="wp-list-table widefat fixed striped pages"
         	print '
                 		    <tr>
             	    	        <th>' . esc_html__('Date / time','sermons-nl') . '</th>
@@ -579,15 +578,16 @@ class sermonsNL{
 			wp_die("No permission");
 		}
 		ob_clean();
-		/*  Processing form data without nonce verification OK (logged in user with permission & forcing to int) */
-		$m = (int)filter_input(INPUT_GET, 'month');
+		//  Processing form data without nonce verification OK (logged in user with permission & the function is not saving any input)
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$m = (isset($_GET['month']) ? (int) $_GET['month'] : 0);
 	    $html = self::admin_edit_sermons_page_get_table($m);
 	    $json = array(
 	        'action' => 'sermonsnl_admin_navigate_table',
 	        'month' => $m,
 	        'html' => $html
 	        );
-	    print json_encode($json);
+	    print wp_json_encode($json);
 		wp_die();
 	}
 	
@@ -635,16 +635,18 @@ class sermonsNL{
 	}
 	
 	public static function admin_show_details(){
-	    // check permission
+		// check permission
 		if(!current_user_can(self::$capability)){
 			wp_die("No permission");
 		}
-		/*  Processing form data without nonce verification OK (logged in user with permission & forcing to int if not empty) */
-		$event_id = filter_input(INPUT_GET, 'event_id');
-		if($event_id === null){
+		//  Processing form data without nonce verification OK: logged in user with permission & the function is not saving any input
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if(!isset($_GET['event_id'])){
 			wp_die("missing argument event_id");
 		}
-		if($event_id === ""){
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if($_GET['event_id'] === ""){
+			// show form to create new event
 		    $html = '
 		        <h3>
 		            <img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/close.gif" class="sermonsnl-closebtn" title="'.esc_html__("Cancel","sermons-nl").'" onclick="sermonsnl_admin.hide_details(null);"/>
@@ -665,10 +667,12 @@ class sermonsNL{
 			);
 			$html .= self::html_form_update_event($event);
 		}else{
-		    $event_id = (int)$event_id;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$event_id = absint($_GET['event_id']);
     		$html = '
     		    <h3><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/close.gif" class="sermonsnl-closebtn" title="'.esc_html__("Close","sermons-nl").'" onclick="sermonsnl_admin.hide_details('.$event_id.');"/>';
     		if($event_id == 0){
+				// show unlinked items with options to link them to an event or create a new event from the unlinked item
     		    $items = self::get_unlinked_items();
     		    $html .= esc_html__("Unlinked items","sermons-nl") . '</h3>
         		    <ul>
@@ -740,6 +744,7 @@ class sermonsNL{
             		</table>';
     		    }
     		}else{
+				// show form to edit an event and/or unlink items from the event
     		    $event = sermonsNL_event::get_by_id($event_id);
     		    if(!$event){
     		        $html = "Error: no event with id #$event_id.</h3>";
@@ -802,7 +807,7 @@ class sermonsNL{
 		    'html' => $html
 		);
 		ob_clean();
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 
@@ -821,8 +826,15 @@ class sermonsNL{
 				<tr>
 					<td>' . esc_html__('Select date-time from','sermons-nl') . ': <sup>1</sup></td>
 					<td><select name="dt_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'dt\');">';
+		$options_str = array(
+			'auto' => __('auto','sermons-nl'),
+			'manual' => __('manual','sermons-nl'),
+			'kerktijden' => 'kerktijden',
+			'kerkomroep' => 'kerkomroep',
+			'youtube' => 'youtube'
+		);
 		foreach(array('auto','manual','kerktijden','kerkomroep','youtube') as $value){
-			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->dt_from ? ' selected="selected"' : '') . '>' . esc_html($value) . '</option>';
+			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->dt_from ? ' selected="selected"' : '') . '>' . esc_html($options_str[$value]) . '</option>';
 		}
 		$html .= '</select></td>
 				</tr>
@@ -840,7 +852,7 @@ class sermonsNL{
 					<td>' . esc_html__('Select sermon type from','sermons-nl') . ': <sup>2</sup></td>
 					<td><select name="sermontype_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'sermontype\');">';
 		foreach(array('auto','manual','kerktijden') as $value){
-			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->sermontype_from ? ' selected="selected"' : '') . '>' . esc_html($value) . '</option>';
+			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->sermontype_from ? ' selected="selected"' : '') . '>' . esc_html($options_str[$value]) . '</option>';
 		}
 		$html .= '</select></td>
 				</tr>
@@ -852,7 +864,7 @@ class sermonsNL{
 					<td>' . esc_html__('Select pastor name from','sermons-nl') . ': <sup>3</sup></td>
 					<td><select name="pastor_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'pastor\');">';
 		foreach(array('auto','manual','kerktijden','kerkomroep') as $value){
-			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->pastor_from ? ' selected="selected"' : '') . '>' . esc_html($value) . '</option>';
+			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->pastor_from ? ' selected="selected"' : '') . '>' . esc_html($options_str[$value]) . '</option>';
 		}
 		$html .= '</select></td>
 				</tr>
@@ -863,8 +875,8 @@ class sermonsNL{
 				<tr>
 					<td>' . esc_html__('Select description from','sermons-nl') . ': <sup>4</sup></td>
 					<td><select name="description_from" onchange="sermonsnl_admin.toggle_manual_row(this,\'description\');">';
-		foreach(array('auto','manual','kerktijden','kerkomroep') as $value){
-			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->description_from ? ' selected="selected"' : '') . '>' . esc_html($value) . '</option>';
+		foreach(array('auto','manual','youtube','kerkomroep') as $value){
+			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->description_from ? ' selected="selected"' : '') . '>' . esc_html($options_str[$value]) . '</option>';
 		}
 		$html .= '</select></td>
 				</tr>
@@ -874,19 +886,31 @@ class sermonsNL{
 				</tr>
 				<tr>
 					<td>' . esc_html__('Other settings','sermons-nl') . ':</td>
-					<td><input type="checkbox" name="include" id="sermonsnl_include"' . ($event->include ? ' checked' : '') . '/><label for="sermonsnl_include"> Include in sermons list</label></td>
+					<td><input type="checkbox" name="include" id="sermonsnl_include"' . ($event->include ? ' checked' : '') . '/><label for="sermonsnl_include"> ' . esc_html__('Include in sermons list','sermons-nl') . ' <sup>5</sup></label></td>
 				</tr>
 				<tr>
 					<td></td>
-					<td><input type="checkbox" name="protected" id="sermonsnl_protected"' . ($event->protected ? ' checked' : '') . '/><label for="sermonsnl_protected"> Protect from automated deletion <sup>5</sup></label></td>
+					<td><input type="checkbox" name="protected" id="sermonsnl_protected"' . ($event->protected ? ' checked' : '') . '/><label for="sermonsnl_protected"> ' . esc_html__('Protect from automated deletion','sermons-nl').' <sup>6</sup></label></td>
 				</tr>
 			</table>
 			<p class="sermonsnl-footnotes">
-				<sup>1.</sup> ' . esc_html__('If auto is selected or if an item is selected that has no date-time, the order of picking the date-time is (based on availability): kerktijden, youtube (if it has a planned date), kerkomroep, youtube (if it has been broadcasted).','sermons-nl') . '<br/>
-				<sup>2.</sup> ' . esc_html__('If auto is selected, sermons type will be selected from kerktijden.','sermons-nl') . '<br/>
-				<sup>3.</sup> ' . esc_html__('If auto is selected, pastor name will be selected from kerktijden or kerkomroep (in this order based on availability).','sermons-nl')  . '<br/>
-				<sup>4.</sup> ' . esc_html__('If auto is selected, description will be selected from youtube or kerkomroep (in this order, based on availability).','sermons-nl') . '<br/>
-				<sup>5.</sup> ' . esc_html__('Events that have no linked items are deleted over night. Tick this box to prevent that from happening.','sermons-nl') . '
+				<sup>1.</sup> ' .
+				esc_html__('If auto is selected or if an item is selected that has no date-time, the order of picking the date-time is (based on availability): kerktijden, youtube (if it has a planned date), kerkomroep, youtube (if it has been broadcasted).','sermons-nl') .
+				'<br/>
+				<sup>2.</sup> ' .
+				esc_html__('If auto is selected, sermons type will be selected from kerktijden.','sermons-nl') .
+				'<br/>
+				<sup>3.</sup> ' .
+				esc_html__('If auto is selected, pastor name will be selected from kerktijden or kerkomroep (in this order based on availability).','sermons-nl')  .
+				'<br/>
+				<sup>4.</sup> ' .
+				esc_html__('If auto is selected, description will be selected from youtube or kerkomroep (in this order, based on availability).','sermons-nl') .
+				'<br/>
+				<sup>5.</sup> ' .
+				esc_html__('If this option is checked, the event will be included when displaying sermons on the website using the sermons-nl-list shortcode.','sermons-nl') .
+				'<br/>
+				<sup>6.</sup> ' .
+				esc_html__('Events that have no linked items are deleted over night. Tick this box to prevent that from happening.','sermons-nl') . '
 			</p>
 		</form>';
 		return $html;
@@ -904,26 +928,26 @@ class sermonsNL{
 			$json = array("action" => "sermonsnl_submit_update_event", "ok" => $ok);
 			if($errMsg) $json['errMsg'] = $errMsg;
 			ob_clean();
-			print json_encode($json);
+			print wp_json_encode($json);
 			wp_die();
 		}
 		// process posted data
-		$event_id = (empty($_POST['event_id']) ? 0 : (int)$_POST['event_id']);
+		$event_id = (empty($_POST['event_id']) ? 0 : filter_input(INPUT_POST, 'event_id', FILTER_SANITIZE_NUMBER_INT));
 		if(empty($_POST['dt_manual'])){
 			$dt_manual = null;
 		}else{
-			$dt_manual = new DateTime(filter_input(INPUT_POST, 'dt_manual'), wp_timezone());
+			$dt_manual = new DateTime(sanitize_text_field(filter_input(INPUT_POST, 'dt_manual')), wp_timezone());
 			if($dt_manual) $dt_manual = $dt_manual->setTimeZone(self::$timezone_db)->format("Y-m-d H:i:s");
 		}
 		$data = array(
-			'dt_from' => filter_input(INPUT_POST, 'dt_from'),
+			'dt_from' => sanitize_text_field(filter_input(INPUT_POST, 'dt_from')),
 			'dt_manual' => $dt_manual,
-			'sermontype_from' => filter_input(INPUT_POST, 'sermontype_from'),
-			'sermontype_manual' => (empty($_POST['sermontype_manual']) ? null : filter_input(INPUT_POST, 'sermontype_manual')),
-			'pastor_from' => filter_input(INPUT_POST, 'pastor_from'),
-			'pastor_manual' => (empty($_POST['pastor_manual']) ? null : filter_input(INPUT_POST, 'pastor_manual')),
-			'description_from' => filter_input(INPUT_POST, 'description_from'),
-			'description_manual' => (empty($_POST['description_manual']) ? null : filter_input(INPUT_POST, 'description_manual')),
+			'sermontype_from' => sanitize_text_field(filter_input(INPUT_POST, 'sermontype_from')),
+			'sermontype_manual' => (empty($_POST['sermontype_manual']) ? null : sanitize_text_field(filter_input(INPUT_POST, 'sermontype_manual'))),
+			'pastor_from' => sanitize_text_field(filter_input(INPUT_POST, 'pastor_from')),
+			'pastor_manual' => (empty($_POST['pastor_manual']) ? null : sanitize_text_field(filter_input(INPUT_POST, 'pastor_manual'))),
+			'description_from' => sanitize_text_field(filter_input(INPUT_POST, 'description_from')),
+			'description_manual' => (empty($_POST['description_manual']) ? null : sanitize_textarea_field(filter_input(INPUT_POST, 'description_manual'))),
 			'include' => (empty($_POST['include']) ? 0 : 1),
 			'protected' => (empty($_POST['protected']) ? 0 : 1)
 		);
@@ -979,9 +1003,9 @@ class sermonsNL{
 	    $json = array('action' => 'sermonsnl_admin_link_item_to_event');
 	    
 	    // get values
-	    $item_type = (string)filter_input(INPUT_POST, 'item_type');
-	    $item_id = (int)filter_input(INPUT_POST, 'item_id');
-	    $event_id = ($_POST['event_id'] == "" ? null : (int)filter_input(INPUT_POST, 'event_id'));
+	    $item_type = sanitize_text_field(filter_input(INPUT_POST, 'item_type'));
+	    $item_id = filter_input(INPUT_POST, 'item_id', FILTER_SANITIZE_NUMBER_INT);
+	    $event_id = ($_POST['event_id'] == "" ? null : filter_input(INPUT_POST, 'event_id', FILTER_SANITIZE_NUMBER_INT));
 	    
 	    // get item
 	    $item = self::get_item_by_type($item_type, $item_id);
@@ -1010,7 +1034,7 @@ class sermonsNL{
 	    $json['unlinked_num'] = self::num_unlinked_items();
 	    
 		ob_clean();
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 
@@ -1032,8 +1056,8 @@ class sermonsNL{
 	    $json = array('action' => 'sermonsnl_admin_unlink_item');
 	    
 	    // get values
-	    $item_type = (string)filter_input(INPUT_POST, 'item_type');
-	    $item_id = (int)filter_input(INPUT_POST, 'item_id');
+	    $item_type = sanitize_text_field(filter_input(INPUT_POST, 'item_type'));
+	    $item_id = filter_input(INPUT_POST, 'item_id', FILTER_SANITIZE_NUMBER_INT);
 	    
 	    // get item
 	    $item = self::get_item_by_type($item_type, $item_id);
@@ -1049,7 +1073,7 @@ class sermonsNL{
 	    $json['unlinked_num'] = self::num_unlinked_items();
 	    
 		ob_clean();
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 	
@@ -1071,7 +1095,7 @@ class sermonsNL{
 	    $json = array('action' => 'sermonsnl_admin_delete_event');
 	    
 	    // get values
-	    $event_id = (int)$_POST['event_id'];
+	    $event_id = filter_input(INPUT_POST, 'event_id', FILTER_SANITIZE_NUMBER_INT);
 	    
 	    // get event
 	    $event = sermonsNL_event::get_by_id($event_id);
@@ -1086,7 +1110,7 @@ class sermonsNL{
 	    }
 	    
 		ob_clean();
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 	
@@ -1100,11 +1124,7 @@ class sermonsNL{
 		$kt_weeksback = get_option('sermonsNL_kerktijden_weeksback');
 		$kt_weeksahead = get_option('sermonsNL_kerktijden_weeksahead');
         $ko_mp = get_option('sermonsNL_kerkomroep_mountpoint');
-        // to check if sources is also needed (whether video or audio is used) - perhaps just instruct to leave stream id's empty if not used.
-		$kg_rss_id = get_option('sermonsNL_kerkdienstgemist_rssid');
-		$kg_audio_stream_id = get_option('sermonsNL_kerkdienstgemist_audiostreamid');
-		$kg_video_stream_id = get_option('sermonsNL_kerkdienstgemist_videostreamid');
-		$yt_channel = get_option('sermonsNL_youtube_channel');
+        $yt_channel = get_option('sermonsNL_youtube_channel');
 		$yt_key = get_option('sermonsNL_youtube_key');
 		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
 
@@ -1134,7 +1154,7 @@ class sermonsNL{
 			sprintf(esc_html__("Enable %s","sermons-nl"), "Kerktijden") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
-						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
+						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible_setting">
 							<td>' . esc_html__("Kerktijden identifier", "sermons-nl") . ':
@@ -1175,7 +1195,7 @@ class sermonsNL{
 							sprintf(esc_html__("Enable %s","sermons-nl"), "Kerkomroep") . '</label></td>
 						</tr>
 						<tr class="collapsible_setting condition">
-						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
+						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible_setting">
 							<td>' . esc_html__("Mount point", "sermons-nl") . ':
@@ -1187,71 +1207,7 @@ class sermonsNL{
 							</td>
 							<td><input type="text" name="sermonsNL_kerkomroep_mountpoint" id="input_kerkomroep_id" value="' . ($ko_mp ? esc_attr($ko_mp) : '') . '"/></td>
 						</tr>
-					</tbody>';
-
-		/*
-		 * Old code for alternative broadcasting service kerkdienstgemist.nl; not able to check out on this service right now.
-		 *
-		print '
-                    <tbody id="kerkdienstgemist_settings"' . ($kg_rss_id ? '' : ' class="settings_disabled"') . '>
-						<tr>
-							<th colspan="2">Kerkdienstgemist.nl</th>
-						</tr>
-						<tr class="always_visible">
-						    <td colspan="2"><input type="checkbox"' . ($kg_rss_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermonsnl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">Enable Kerkdienst gemist</label></td>
-						</tr>
-						<tr class="collapsible_setting condition">
-						    <td colspan="2">The use of data from this tool on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.</td>
-						</tr>
-						<tr class="collapsible_setting">
-							<td>Archive ID:
-								<div class="help">
-									<div>
-										Go to <a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a> and log in.<br/>
-										Open the archive menu: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_archive_btn.jpg"/><br/>
-										Click the RSS button: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_rss_btn.jpg"/><br/>
-										<img src="' . plugin_dir_url(__FILE__) . 'img/kg_rss_link.jpg"/><br/>
-										Copy the number from one of the RSS URLs.
-									</div>
-								</div>
-							</td>
-							<td><input type="text" name="sermonsNL_kerkdienstgemist_rssid" id="input_kerkdienstgemist_id" value="' . ($kg_rss_id ? $kg_rss_id : '') . '"/></td>
-						</tr>
-						<tr class="collapsible_setting">
-							<td>Audio livestream ID:
-								<div class="help">
-									<div>
-										Go to <a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a> and log in.<br/>
-										Go to the Channels menu: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_channels_btn.jpg"/><br/>
-										Choose "Kerkradio" in the sub-menu: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_channels_sub.jpg"/><br/>
-										Click the "streams" button: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_streams_btn.JPG"/><br/>
-										<img src="' . plugin_dir_url(__FILE__) . 'img/kg_audio_stream.jpg"/><br/>
-										Copy the number from the public audio stream URL.<br/>
-										If you don\'t want to use the audio livestream, you can just leave this field empty.
-									</div>
-								</div>
-							</td>
-							<td><input type="text" name="sermonsNL_kerkdienstgemist_audiostreamid" value="' . ($kg_audio_stream_id ? $kg_audio_stream_id : '') . '"/></td>
-						</tr>
-						<tr class="collapsible_setting">
-							<td>Video livestream ID:
-								<div class="help">
-									<div>
-										Go to <a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a> and log in.<br/>
-										Go to the Channels menu: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_channels_btn.jpg"/><br/>
-										Choose "Kerk TV" in the sub-menu: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_channels_sub.jpg"/><br/>
-										Click the "streams" button: <img src="' . plugin_dir_url(__FILE__) . 'img/kg_streams_btn.JPG"/><br/>
-										<img src="' . plugin_dir_url(__FILE__) . 'img/kg_video_stream.jpg"/><br/>
-										Copy the number from the public video stream URL.<br/>
-										If you don\'t want to use the video livestream, you can just leave this field empty.
-									</div>
-								</div>
-							</td>
-							<td><input type="text" name="sermonsNL_kerkdienstgemist_videostreamid" value="' . ($kg_video_stream_id ? $kg_video_stream_id : '') . '"/></td>
-						</tr>
-                    </tbody>';
-		*/
-		print '
+					</tbody>
                     <tbody id="youtube_settings"' . ($yt_channel ? '' : ' class="settings_disabled"') . '>
 						<tr>
 							<th colspan="2">YouTube.com</th>
@@ -1315,7 +1271,7 @@ class sermonsNL{
 		foreach(self::OPTION_NAMES as $option_name => $attr){
 			if(array_key_exists($option_name, $_POST)){
 				$old_value = get_option($option_name);
-				$new_value = filter_input(INPUT_POST, $option_name);
+				$new_value = sanitize_text_field(filter_input(INPUT_POST, $option_name));
 				if($attr['default'] === null && $new_value === ""){
 					$new_value = null;
 				}elseif($attr['type'] == 'integer'){
@@ -1381,7 +1337,7 @@ class sermonsNL{
 			'resources' => implode(',', array_unique($get_data)),
 			'nonce' => wp_create_nonce('sermonsnl-background-action')
 		);
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 	
@@ -1426,10 +1382,7 @@ class sermonsNL{
         // kerkomroep: update the archive and check whether all items are present
         if(get_option('sermonsNL_kerkomroep_mountpoint')){
             self::log('update_daily', 'updating kerkoproep (all + url validation)');
-            $ok = sermonsNL_kerkomroep::get_remote_data();
-			if(false !== $ok){
-				sermonsNL_kerkomroep::validate_remote_urls();
-			}
+            sermonsNL_kerkomroep::get_remote_data();
         }
         // youtube: update the entire archive, don't search for new items
         if(get_option('sermonsNL_youtube_channel')){
@@ -1697,6 +1650,7 @@ class sermonsNL{
 	}
 
 	// ajax server handler to check current status of live broadcasts and new live broadcasts
+	// no nonce verification needed because no input data are stored, only publicly available data retrieved
 	public static function check_status(){
 	    
 		ob_clean();
@@ -1705,15 +1659,18 @@ class sermonsNL{
 		self::update_now();
 		
 		// which to update
-		$check_list = (int)filter_input(INPUT_GET, 'check_list');
-		$check_lone = (int)filter_input(INPUT_GET, 'check_lone');
-		$live = filter_input(INPUT_GET, 'live', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$check_list = (isset($_GET['check_list']) ? (int) $_GET['check_list'] : 0);
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$check_lone = (isset($_GET['check_lone']) ? (int) $_GET['check_lone'] : 0);
 
 		// get data
 		$items = array();
 		$events = array();
-        if(!empty($live)){
-            foreach($live as $id_str){
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if(isset($_GET['live']) && is_array($_GET['live'])){
+			$live = array_map(function($id_str){return sanitize_text_field($id_str);}, filter_input(INPUT_GET, 'live', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY));
+		    foreach($live as $id_str){
                 preg_match_all("/^sermonsnl_([a-z]+)_(audio_|video_|)([0-9]+)(_lone|)$/", $id_str, $matches);
                 $type = $matches[1][0];
                 $id = $matches[3][0];
@@ -1779,7 +1736,7 @@ class sermonsNL{
 				);
 			}
 		}
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 
@@ -1787,9 +1744,13 @@ class sermonsNL{
 	public static function show_more(){
 		ob_clean();
 		$json = array('call' => "sermonsnl_showmore");
-		$direction = filter_input(INPUT_GET, 'direction');
-		$current = filter_input(INPUT_GET, 'current');
-		$datefmt = filter_input(INPUT_GET, 'datefmt');
+		//  Processing form data without nonce verification OK (logged in user with permission & the function is not saving any input)
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$direction = sanitize_text_field(filter_input(INPUT_GET, 'direction'));
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current = sanitize_text_field(filter_input(INPUT_GET, 'current'));
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$datefmt = sanitize_text_field(filter_input(INPUT_GET, 'datefmt'));
 		if($direction === null || $current === null){
 		    $json["error"] = "insufficient parameters provided";
 		}else{
@@ -1826,7 +1787,7 @@ class sermonsNL{
     		    }
     		}
 		}
-		print json_encode($json);
+		print wp_json_encode($json);
 		wp_die();
 	}
 
@@ -1887,15 +1848,15 @@ class sermonsNL{
 			if(!$standalone){
 				$html .= '<div class="sermonsnl-details"><div>';
 			}
+			$html .= '<div id="sermonsnl_event_'.esc_attr($event->id).($standalone?'_lone':'').'_links" class="sermonsnl-links">';
 			if(!($event->yt_video_id || $event->ko_id)){
 				$html .= ($event->kt_cancelled ? esc_html__('This sermon has been cancelled.','sermons-nl') : esc_html__('There are no broadcasts for this sermon.','sermons-nl'));
 			}
 			else{
-				$html .= '<div class="sermonsnl-links" id="sermonsnl_event_'.esc_attr($event->id).($standalone?'_lone':'').'_links">';
 				$html .= self::html_event_links($event, $standalone);
-				$html .= '</div>';
-    			$html .= '<div class="sermonsnl-description">' . nl2br(esc_html($event->description)) . '</div>';
 			}
+			$html .= '</div>';
+    		$html .= '<div class="sermonsnl-description">' . nl2br(esc_html($event->description)) . '</div>';
 			if($standalone){
 				$html .= '</div>';
 			}else{
@@ -2040,13 +2001,6 @@ class sermonsNL{
 			/* escaping is done by the function */
 			$html .= self::html_ko_audio_video_link($event, $standalone);
 		}
-		// NB: old code, this needs change when implementing kerkdienst gemist. Currently not accessible for me.
-		//if($event->kg_audio_url){
-		//	$html .= '<p class="audio' . ($event->kg_a['live'] ? ' is-live' : '') . '"><a' . ($event->kg_a['link'] ? ' href="' . $event->kg_a['link'] . '" target="_blank" id="kg_a_'.$dt.'" title="Luisteren via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_a['mimetype'] . '\',\'kg-audio\');"' : '') . '>Kerkdienstgemist' . ($event->kg_a['live'] ? ($event->kg_a['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
-		//}
-		//if($event->kg_video_url){
-		//	$html .= '<p class="video' . ($event->kg_v['live'] ? ' is-live' : '') . '"><a' . ($event->kg_v['link'] ? ' href="' . $event->kg_v['link'] . '" target="_blank" id="kg_v_'.$dt.'" title="Kijken via kerkdienstgemist" onclick="return !kerkdiensten.playmedia(this, \'' . $event->kg_v['mimetype'] . '\',\'kg-video\');"' : '') . '>Kerkdienstgemist' . ($event->kg_v['live'] ? ($event->kg_v['link'] ? ' (live)' : ' (archiveren)') : '') . '</a></p>';
-		//}
 		if($yt_id){
 			/* escaping is done by the function */
 			$html .= self::html_yt_video_link($event, $standalone);
@@ -2156,8 +2110,8 @@ class sermonsNL{
 
     // adds js and css to the site
     public static function add_site_scripts_and_styles(){
-		wp_enqueue_style('sermonsnl-stylesheet', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.1.1');
-		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.1.1');
+		wp_enqueue_style('sermonsnl-stylesheet', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.2');
+		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.2', array('in_footer'=>false));
 	}
 	public static function add_site_custom_script(){
 		print '
@@ -2260,7 +2214,6 @@ class sermonsNL{
                 "kerktijden",
                 "kerktijdenpastors",
                 "kerkomroep",
-                "kerkdienstgemist",
                 "youtube",
 				"log"
             ) as $surname){
@@ -2276,6 +2229,7 @@ class sermonsNL{
     }
 
     // LOAD TRANSLATION
+    // formally not needed for WP 4.6+, but since it didn't localize on my WP6.5.5 production server, I kept it in.
     public static function load_translation(){
 		 load_plugin_textdomain( 'sermons-nl', false, dirname(plugin_basename( __FILE__ )) . '/languages');
 	}
