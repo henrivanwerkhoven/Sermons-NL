@@ -894,7 +894,7 @@ class sermonsNL{
 				</tr>
 				<tr>
 					<td></td>
-					<td><input type="submit" value="' . esc_html__('Save settings','sermons-nl') . '"/></td>
+					<td>' . get_submit_button(esc_html__('Save settings','sermons-nl'), 'primary') . '</td>
 				</tr>
 			</table>
 			<p class="sermonsnl-footnotes">
