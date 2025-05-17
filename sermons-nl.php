@@ -340,7 +340,7 @@ class sermonsNL{
 	public static function add_admin_scripts_and_styles($hook){
 	    if(strpos($hook,'sermons-nl') === false) return;
 	    wp_enqueue_style('sermonsNL-admin-css', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.2');
-		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.2', array('in_footer' => false));
+		wp_enqueue_script('sermonsNL-admin-js', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.2', false);
 	}
 	
 	public static function add_admin_custom_script($hook){
@@ -2111,7 +2111,7 @@ class sermonsNL{
     // adds js and css to the site
     public static function add_site_scripts_and_styles(){
 		wp_enqueue_style('sermonsnl-stylesheet', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.2');
-		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.2', array('in_footer'=>false));
+		wp_enqueue_script('sermonsnl-javascript', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.2', false);
 	}
 	public static function add_site_custom_script(){
 		print '
