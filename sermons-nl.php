@@ -821,7 +821,7 @@ class sermonsNL{
 			<table>
 				<tr>
 					<td><h4>' . esc_html__('Event settings', 'sermons-nl') . '</h4></td>
-					<td><input type="submit" value="' . esc_html__('Save settings','sermons-nl') . '"/></td>
+					<td></td>
 				</tr>
 				<tr>
 					<td>' . esc_html__('Select date-time from','sermons-nl') . ': <sup>1</sup></td>
@@ -891,6 +891,10 @@ class sermonsNL{
 				<tr>
 					<td></td>
 					<td><input type="checkbox" name="protected" id="sermonsnl_protected"' . ($event->protected ? ' checked' : '') . '/><label for="sermonsnl_protected"> ' . esc_html__('Protect from automated deletion','sermons-nl').' <sup>6</sup></label></td>
+				</tr>
+				<tr>
+					<td></td>
+					<td><input type="submit" value="' . esc_html__('Save settings','sermons-nl') . '"/></td>
 				</tr>
 			</table>
 			<p class="sermonsnl-footnotes">
