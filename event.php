@@ -27,6 +27,7 @@ class sermonsNL_event{
                     'youtube' => $this->youtube
                 );
             case 'dt': 
+            case 'dt_start':
                 switch($this->data['dt_from']){
                     case 'manual': return $this->data['dt_manual'];
                     case 'kerktijden': return ($this->kerktijden ? $this->kerktijden->dt : null);
@@ -39,8 +40,28 @@ class sermonsNL_event{
                         if($this->youtube) return $this->youtube->dt_actual;
                         return $this->dt_min; // fallback
                 }
+            case 'pastor':
+                if($this->pastor_from=='manual') return $this->pastor_manual;
+                if($this->pastor_from=='kerktijden' && $this->kerktijden) return $this->kerktijden->pastor;
+                if($this->pastor_from=='kerkomroep' && $this->kerkomroep) return $this->kerkomroep->pastor;
+                if($this->kerktijden) return $this->kerktijden->pastor;
+                if($this->kerkomroep) return $this->kerkomroep->pastor;
+                return '';
+            case 'sermontype':
+                if($this->sermontype_from=='manual') return $this->sermontype_manual;
+                if($this->kerktijden) return $this->kerktijden->sermontype;
+                return '';
+            case 'description':
+                if($this->description_from=='manual') return $this->description_manual;
+                if($this->description_from=='youtube' && $this->youtube) return $this->youtube->description;
+                if($this->description_from=='kerkomroep' && $this->kerkomroep) return $this->kerkomroep.description;
+                if($this->youtube) return $this->youtube->description;
+                if($this->kerkomroep) return $this->kerkomroep->description;
+                return '';
             case 'has_audio':
                 return ($this->kerkomroep && $this->kerkomroep->audio_url);
+            case 'live':
+                return ($this->audio_live || $this->video_live);
             case 'audio_live':
                 return ($this->kerkomroep && $this->kerkomroep->audio_url && $this->kerkomroep->live);
             case 'has_video':
@@ -49,6 +70,12 @@ class sermonsNL_event{
                 return ($this->youtube && $this->youtube->planned) && !($this->kerkomroep && $this->kerkomroep->video_url && $this->kerkomroep->live);
             case 'video_live':
                 return ($this->kerkomroep && $this->kerkomroep->video_url && $this->kerkomroep->live) || ($this->youtube && $this->youtube->live);
+            case 'ko_id':
+                if(!$this->kerkomroep) return null;
+                return $this->kerkomroep->id;
+            case 'yt_video_id':
+                if(!$this->youtube) return null;
+                return $this->youtube->video_id;
             default: return null;
         }
     }

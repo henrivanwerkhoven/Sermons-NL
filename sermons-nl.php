@@ -1540,7 +1540,7 @@ class sermonsNL{
 		    // in this case it could be more than the count setting
 		    $count = count($data);
 		}
-	
+
 		// ready to build html
         $html = '
 		<div>';
@@ -1557,7 +1557,7 @@ class sermonsNL{
 		        if($num_rec) $showit = true;
 		    }
 		    if($showit){
-    			$html .= '<div><a href="javascript:;" id="sermonsnl_more_up" onclick="sermonsnl.showmore(\'up\', \''.esc_attr($datefmt).'\');">' . esc_html__("Load earlier sermons", 'sermons-nl') . '</a></div>';
+    			$html .= '<div><a href="javascript:;" id="sermonsnl_more_up" onclick="sermonsnl.showmore(\'up\');">' . esc_html__("Load earlier sermons", 'sermons-nl') . '</a></div>';
 		    }
 		}
 
@@ -1581,7 +1581,7 @@ class sermonsNL{
 		    if($showit){
     			$html .= '
     			<div>
-					<a href="javascript:;" id="sermonsnl_more_down" onclick="sermonsnl.showmore(\'down\',\''.esc_attr($datefmt).'\');">' . esc_html__("Load later sermons", 'sermons-nl') . '</a>
+					<a href="javascript:;" id="sermonsnl_more_down" onclick="sermonsnl.showmore(\'down\');">' . esc_html__("Load later sermons", 'sermons-nl') . '</a>
 				</div>';
 		    }
 		}
@@ -1596,7 +1596,8 @@ class sermonsNL{
 		);
 
 		$html .= '
-			</div>';
+		</div>
+		<script>sermonsnl.datefmt = "' . esc_html($datefmt) . '";</script>';
 
         return $html;
     }
@@ -1676,25 +1677,33 @@ class sermonsNL{
                 $id = $matches[3][0];
 				$item = self::get_item_by_type($type, $id);
                 $items[] = $item;
-				//if($check_list && $matches[4][0] == '' && $item->event_id){
-				//	$event_ids[] = $item->event_id;
-				//}
             }
         }
+        $events_client = array();
+		foreach($items as $item){
+			if($item->event_id && array_search($item->event, $events) === false && $item->event->include){
+				$events[] = $item->event;
+				$events_client[] = $item->event;
+			}
+		}
+
+
         $yt_live = sermonsNL_youtube::get_live();
 		if($yt_live !== null){
 			$items[] = $yt_live;
+			if($yt_live->event_id && array_search($yt_live->event, $events) === false && $yt_live->event->include){
+				$events[] = $yt_live->event;
+			}
 		}
 		$ko_live = sermonsNL_kerkomroep::get_live();
 		if($ko_live !== null){
 			$items[] = $ko_live;
+			if($ko_live->event_id && array_search($ko_live->event, $events) === false && $ko_live->event->include){
+				$events[] = $ko_live->event;
+			}
 		}
 
 		$items = array_unique($items, SORT_REGULAR);
-
-		foreach($items as $item){
-			if($item->event_id && array_search($item->event, $events) === false) $events[] = $item->event;
-		}
 
 		// get html of all selected events
 		$json = array(
@@ -1734,6 +1743,14 @@ class sermonsNL{
 					'audio_class' => self::css_audio_class($event),
 					'video_class' => self::css_video_class($event)
 				);
+				if($event->live && array_search($event, $events_client) === false){
+					// perhaps items is not in the list yet. If so, I want it to be added in the right place
+					$datefmt = 'short'; // replace by javascript input
+					$i = count($json['events_list'])-1;
+					$json['events_list'][$i]['event_html'] = self::html_list_items(array($event), 1, $datefmt, false);
+					$json['events_list'][$i]['event_timestamp'] = (new DateTime($event->dt, sermonsNL::$timezone_db))->getTimestamp();
+					$event->timestamp;
+				}
 			}
 		}
 		print wp_json_encode($json);
@@ -1835,16 +1852,14 @@ class sermonsNL{
 		foreach($seq as $i){
 			$event = $data[$i];
 			$dt = $event->dt_start;
-			// to do: check how to deal with cancelled sermons
-			// $cancelled = !empty($event->kt['cancelled']);
 			if($standalone){
 				$html .= '<div>';
 			}else{
-				$html .= '<li id="sermonsnl_event_' . esc_attr($event->id) . '"' . (!empty($event->display_open) ? ' class="sermonsnl-open"' : '') . ' onclick="sermonsnl.toggledetails(this);">';
+				$html .= '<li id="sermonsnl_event_' . esc_attr($event->id) . '"' . (!empty($event->display_open) ? ' class="sermonsnl-open"' : '') . ' onclick="sermonsnl.toggledetails(this);" event-timestamp="'.(new DateTime($dt, sermonsNL::$timezone_db))->getTimestamp().'">';
 				$html .= '<span class="'.esc_attr(self::css_audio_class($event)).'"></span>';
 				$html .= '<span class="'.esc_attr(self::css_video_class($event)).'"></span>';
 			}
-			$html .= '<span class="sermonsnl-dt">' . esc_html(ucfirst(self::datefmt($datefmt, $event->dt_start))) . ' </span><span class="sermonsnl-pastor">' . esc_html($event->pastor) . ' </span><span class="sermonsnl-type">' . ($event->sermontype == "Reguliere dienst" ? "" : esc_html($event->sermontype)) . '</span>';
+			$html .= '<span class="sermonsnl-dt">' . esc_html(ucfirst(self::datefmt($datefmt, $dt))) . ' </span><span class="sermonsnl-pastor">' . esc_html($event->pastor) . ' </span><span class="sermonsnl-type">' . ($event->sermontype == "Reguliere dienst" ? "" : esc_html($event->sermontype)) . '</span>';
 			if(!$standalone){
 				$html .= '<div class="sermonsnl-details"><div>';
 			}
@@ -1860,8 +1875,7 @@ class sermonsNL{
 			if($standalone){
 				$html .= '</div>';
 			}else{
-				$html .= '</div></div>';
-				$html .= '</li>';
+				$html .= '</div></div></li>';
 			}
 		}
 		return $html;
@@ -2034,24 +2048,14 @@ class sermonsNL{
 		}
 		$html = '';
 		if($ko_audio_url){
-			$html .= '
-				<p id="sermonsnl_kerkomroep_audio_'.esc_attr($ko_id).($standalone?'_lone':'').'" class="sermonsnl-audio' . ($ko_live ? '-live' : '') . '">
-					<a id="ko_audio_'.esc_attr($ko_id).($standalone?'_lone':'').'" href="' . esc_url($ko_audio_url) . '" target="_blank" title="' .
+			$html .= '<p id="sermonsnl_kerkomroep_audio_'.esc_attr($ko_id).($standalone?'_lone':'').'" class="sermonsnl-audio' . ($ko_live ? '-live' : '') . '"><a id="ko_audio_'.esc_attr($ko_id).($standalone?'_lone':'').'" href="' . esc_url($ko_audio_url) . '" target="_blank" title="' .
 					/* Translators: service type. */
-					sprintf(esc_html__("Listen to %s audio","sermons-nl"),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . esc_attr($ko_audio_mimetype) . '\', \'ko-audio\''.($standalone?',true':'').');">
-						Kerkomroep' . ($ko_live ? ' (' . esc_html__('live','sermons-nl') . ')' : '') . '
-					</a>
-				</p>';
+					sprintf(esc_html__("Listen to %s audio","sermons-nl"),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . esc_attr($ko_audio_mimetype) . '\', \'ko-audio\''.($standalone?',true':'').');">Kerkomroep' . ($ko_live ? ' (' . esc_html__('live','sermons-nl') . ')' : '') . '</a></p>';
 		}
 		if($ko_video_url){
-			$html .= '
-				<p id="sermonsnl_kerkomroep_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" class="sermonsnl-video' . ($ko_live ? '-live' : '') . '">
-					<a id="ko_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" href="' . esc_url($ko_video_url) . '" target="_blank" title="' .
+			$html .= '<p id="sermonsnl_kerkomroep_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" class="sermonsnl-video' . ($ko_live ? '-live' : '') . '"><a id="ko_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" href="' . esc_url($ko_video_url) . '" target="_blank" title="' .
 					/* Translators: service type. */
-					sprintf(esc_html__('Watch %s video','sermons-nl'),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . esc_attr($ko_video_mimetype) . '\', \'ko-video\''.($standalone?',true':'').');">
-						Kerkomroep' . ($ko_live ? ' (' . esc_html__('live','sermons-nl') . ')' : '') . '
-					</a>
-				</p>';
+					sprintf(esc_html__('Watch %s video','sermons-nl'),"Kerkomroep") . '" onclick="return !sermonsnl.playmedia(this, \'' . esc_attr($ko_video_mimetype) . '\', \'ko-video\''.($standalone?',true':'').');">Kerkomroep' . ($ko_live ? ' (' . esc_html__('live','sermons-nl') . ')' : '') . '</a></p>';
 		}
 		return $html;
 	}
@@ -2076,21 +2080,13 @@ class sermonsNL{
 			$yt_planned = $data->yt_planned;
 			$yt_video_id = $data->yt_video_id;
 		}
-		$html = '
-				<p id="sermonsnl_youtube_'.esc_attr($yt_id).($standalone?'_lone':'').'" class="sermonsnl-video' . ($yt_live ? '-live' : ($yt_planned ? '-planned' : '')) . '">
-					<a id="yt_video_'.esc_attr($yt_id).($standalone?'_lone':'').'" href="https://www.youtube.com/watch?v='.esc_attr($yt_video_id).'" target="_blank" title="' .
+		$html = '<p id="sermonsnl_youtube_'.esc_attr($yt_id).($standalone?'_lone':'').'" class="sermonsnl-video' . ($yt_live ? '-live' : ($yt_planned ? '-planned' : '')) . '"><a id="yt_video_'.esc_attr($yt_id).($standalone?'_lone':'').'" href="https://www.youtube.com/watch?v='.esc_attr($yt_video_id).'" target="_blank" title="' .
 					/* Translators: service type. */
-					sprintf(esc_html__("Watch %s video","sermons-nl"), "YouTube") . '" onclick="return !sermonsnl.playmedia(this, \'video/youtube\',\'yt-video\''.($standalone?',true':'').');">
-						YouTube' . ($yt_live ? ' (' . esc_html__('live','sermons-nl') . ')' : ($yt_planned ? ' (' . esc_html__('planned','sermons-nl') . ')' : '')) . '
-					</a>';
+					sprintf(esc_html__("Watch %s video","sermons-nl"), "YouTube") . '" onclick="return !sermonsnl.playmedia(this, \'video/youtube\',\'yt-video\''.($standalone?',true':'').');">YouTube' . ($yt_live ? ' (' . esc_html__('live','sermons-nl') . ')' : ($yt_planned ? ' (' . esc_html__('planned','sermons-nl') . ')' : '')) . '</a>';
 		if(!$standalone){
-			$html .= '
-					<a href="https://www.youtube.com/watch?v='.esc_attr($yt_video_id).'" target="_blank" title="' . esc_html__("Open video on YouTube","sermons-nl") . '">
-						<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/icon_newwindow.png" style="height:15px;"/>
-					</a>';
+			$html .= ' <a href="https://www.youtube.com/watch?v='.esc_attr($yt_video_id).'" target="_blank" title="' . esc_html__("Open video on YouTube","sermons-nl") . '"><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/icon_newwindow.png" style="height:15px;"/></a>';
 		}
-		$html .= '
-				</p>'; // open in new window icon: https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_newWindow-ltr.svg
+		$html .= '</p>'; // open in new window icon: https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_newWindow-ltr.svg
 		return $html;
 	}
 	

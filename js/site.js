@@ -27,12 +27,12 @@ var sermonsnl = {
 			d[i].onclick = function(e){ e.stopPropagation(); };
 		}
 	},
-	showmore : function(direction, datefmt){
+	showmore : function(direction){
 		// get attributes
 		var data = {
 			action : "sermonsnl_showmore", 
 			direction: direction,
-			datefmt : datefmt
+			datefmt : self.datefmt
 		};
 		x = document.getElementById("sermonsnl_list");
 		if(direction=="up"){
@@ -124,7 +124,8 @@ var sermonsnl = {
 		    action : 'sermonsnl_checkstatus',
 		    live : sermonsnl.checkstatus_ids,
 			check_list : (sermonsnl.check_list ? 1 : 0),
-			check_lone : (sermonsnl.check_lone ? 1 : 0)
+			check_lone : (sermonsnl.check_lone ? 1 : 0),
+			datefmt : sermonsnl.datefmt
 		};
 		
 		jQuery.get(sermonsnl.admin_url, data, function(response){
@@ -149,6 +150,29 @@ var sermonsnl = {
 						}
 						else{
 							console.log('Sermons-NL error: Incorrect id for li element?');
+						}
+					}
+					else if(response.events_list[i].event_html){
+						new_timestamp = response.events_list[i].event_timestamp;
+						ul_obj = document.getElementById('sermonsnl_list');
+						tmp_ul_obj = document.createElement('ul');
+						tmp_ul_obj.innerHTML = response.events_list[i].event_html;
+						new_li_obj = tmp_ul_obj.firstChild;
+						if(ul_obj){
+							li_objs = ul_obj.getElementsByTagName('li');
+							added = false;
+							for(const li_obj of li_objs){
+								this_timestamp = li_obj.getAttribute('event-timestamp');
+								if(this_timestamp > new_timestamp){
+									ul_obj.insertBefore(new_li_obj, li_obj);
+									added = true;
+									break;
+								}
+							}
+							if(!added){
+								ul_obj.append(new_li_obj);
+							}
+							sermonsnl.stopPropagation();
 						}
 					}
 				}
@@ -389,7 +413,8 @@ var sermonsnl = {
 	check_lone : false,
 	onclick : null,
 	check_interval : Infinity,
-	admin_url : null
+	admin_url : null,
+	datefmt : 'short'
 }
 jQuery(document).ready(function($){
 	x_list = document.getElementById("sermonsnl_list");
