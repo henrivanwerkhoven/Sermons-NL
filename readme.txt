@@ -73,7 +73,10 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 
 == Screenshots ==
 
-
+1. Site-embedded list of sermons while one is live broadcasting. Clicking one of these links will play the media (audio or video).
+2. Site-embedded list of sermons, including earlier audio and video broadcasted services, a planned youtube broadcast, and future sermons.
+3. In the administrations page on the WordPress Dashboard, sermons can be adjusted individually when needed. You can also find shortcodes to add individual sermons or broadcasts to your website.
+4. There is a shortcode creator in the WordPress Dashboard that helps you embed the list of sermons on your website according to your wishes.
 
 == Changelog ==
 
