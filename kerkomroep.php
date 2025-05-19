@@ -412,7 +412,6 @@ class sermonsNL_kerkomroep{
         // delete (if audio/video urls also not available) the items that were not found in the archive
         if($delete_if_not_exists){
             $not_found = array_diff(array_keys($local_data), $found_items);
-            sermonsNL::log("sermonsNL_kerkomroep::compare_remote_to_local_data","Found: ".print_r($found_items,true)."; Local: " . print_r(array_keys($local_data),true) . "; Not found: " . print_r($not_found,true));
             foreach($not_found as $i){
                 $item = $local_data[$i];
                 if(!$item->validate_remote_urls()){
