@@ -94,6 +94,12 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Bug fix: page refresh required after resolving issue in plugin dashboard
 * Bug fix: kerkomroep live broadcast can be deleted when no longer broadcasting
 
+= 0.3 =
+* Use of Wordpress build-in http api
+* Proper use of inline script
+* Removing dependency on external script
+* Added documentation of external services
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -101,3 +107,7 @@ First release for review by Wordpress team.
 
 = 0.2 =
 Optimization following automated plugin review by Wordpress, and two bugs were fixed.
+
+= 0.3 =
+Optimization following manual plugin review by Wordpress.
+
