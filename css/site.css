@@ -1,153 +1,153 @@
-#sermonsnl_list{
+#sermons_nl_list{
 	list-style-type: none;
 	background-color: #e5e5e5;
 	margin:0;
 	padding: 2px;
 }
-#sermonsnl_list li{
+#sermons_nl_list li{
 	background-color: #f5f5f5;
 	margin: 0 0 2px 0;
 	padding:2px;
 }
-#sermonsnl_list li.sermonsnl-open{
+#sermons_nl_list li.sermons-nl-open{
 	background-color: #ffffff;
 	font-weight: bold;
 }
-#sermonsnl_list li:last-child{
+#sermons_nl_list li:last-child{
 	margin-bottom:0;
 }
-.sermonsnl-dt{
+.sermons-nl-dt{
 	display: inline-block;
 	width: 250px;
 }
-.sermonsnl-pastor{
+.sermons-nl-pastor{
 	display: inline-block;
 	width: 200px;
 }
-#sermonsnl_list>li{
+#sermons_nl_list>li{
 	cursor: pointer;
 	padding: 2px;
 }
-#sermonsnl_list>li div{
+#sermons_nl_list>li div{
 	cursor: initial;
 }
-.sermonsnl-details{
+.sermons-nl-details{
 	height:0;
 	overflow:hidden;
 	font-weight: normal;
 	transition: height 0.5s;
 }
-.sermonsnl-open .sermonsnl-details{
+.sermons-nl-open .sermons-nl-details{
 	height: auto;
 	/* set height to content height of nesting div
 	   this is done in javascript (not possible in css)
 	*/
 }
-.sermonsnl-av{
+.sermons-nl-av{
 	display: inline-block;
 	width:25px;
 	height:20px;
 }
 
-.sermonsnl-audio{
+.sermons-nl-audio{
 	background-image: url('../img/audio.gif');
 	background-repeat: no-repeat;
 }
-.sermonsnl-audio-live{
+.sermons-nl-audio-live{
 	background-image: url('../img/audio_live.gif');
 	background-repeat: no-repeat;
 }
-.sermonsnl-video{
+.sermons-nl-video{
 	background-image: url('../img/video2.gif');
 	background-repeat: no-repeat;
 }
-.sermonsnl-video-live{
+.sermons-nl-video-live{
 	background-image: url('../img/video2_live.gif');
 	background-repeat: no-repeat;
 }
-.sermonsnl-video-planned{
+.sermons-nl-video-planned{
 	background-image: url('../img/video2_planned.gif');
 	background-repeat: no-repeat;
 }
-.sermonsnl-open .sermonsnl-av{
+.sermons-nl-open .sermons-nl-av{
     visibility: hidden;
 }
 
-.sermonsnl-links{
+.sermons-nl-links{
 	display: inline-block;
 	vertical-align: top;
 	padding: 10px;
 }
 
-p.sermonsnl-audio,
-p.sermonsnl-audio-live,
-p.sermonsnl-video,
-p.sermonsnl-video-live,
-p.sermonsnl-video-planned{
+p.sermons-nl-audio,
+p.sermons-nl-audio-live,
+p.sermons-nl-video,
+p.sermons-nl-video-live,
+p.sermons-nl-video-planned{
 	width: 200px;
 	height: 20px;
 }
-p.sermonsnl-audio a,
-p.sermonsnl-audio-live a,
-p.sermonsnl-video a,
-p.sermonsnl-video-planned a,
-p.sermonsnl-video-live a{
+p.sermons-nl-audio a,
+p.sermons-nl-audio-live a,
+p.sermons-nl-video a,
+p.sermons-nl-video-planned a,
+p.sermons-nl-video-live a{
 	padding-left: 25px;
 	line-height:25px;
 }
 
-.sermonsnl-description{
+.sermons-nl-description{
 	display: inline-block;
 	padding:10px;
 	vertical-align: top;
 }
 
-#sermonsnl_more_down.disabled,
-#sermonsnl_more_up.disabled{
+#sermons_nl_more_down.disabled,
+#sermons_nl_more_up.disabled{
 	color: #c0c0c0;
 }
-#sermonsnl_more_down.disabled::after,
-#sermonsnl_more_up.disabled::after{
+#sermons_nl_more_down.disabled::after,
+#sermons_nl_more_up.disabled::after{
 	content: " ...";
 }
 
 /* responsive style for the list item */
-#sermonsnl_list.style-narrow .sermonsnl-dt{
+#sermons_nl_list.style-narrow .sermons-nl-dt{
 	width: auto;
 	padding-left:10px;
 }
-#sermonsnl_list.style-narrow .sermonsnl-pastor{
+#sermons_nl_list.style-narrow .sermons-nl-pastor{
 	width: auto;
 	display:block;
 	padding-left:60px;
 }
-#sermonsnl_list.style-narrow .sermonsnl-pastor:empty{
+#sermons_nl_list.style-narrow .sermons-nl-pastor:empty{
 	display:none;
 }
-#sermonsnl_list.style-narrow .sermonsnl-type{
+#sermons_nl_list.style-narrow .sermons-nl-type{
 	width: auto;
 	padding-left:60px;
 	display:block;
 	font-style: italic;
 }
-#sermonsnl_list.style-narrow .sermonsnl-type::before{
+#sermons_nl_list.style-narrow .sermons-nl-type::before{
 	content: "(";
 }
-#sermonsnl_list.style-narrow .sermonsnl-type::after{
+#sermons_nl_list.style-narrow .sermons-nl-type::after{
 	content: ")";
 }
-#sermonsnl_list.style-narrow .sermonsnl-type:empty{
+#sermons_nl_list.style-narrow .sermons-nl-type:empty{
 	display:none;
 }
 
-.sermonsnl-details video{
+.sermons-nl-details video{
 	width: 100%;
 }
 
-.sermonsnl-logos{
+.sermons-nl-logos{
     margin-top: 10px;
 }
-.sermonsnl-logos img{
+.sermons-nl-logos img{
     width: 150px;
     min-width: 75px;
     max-width: 100%;

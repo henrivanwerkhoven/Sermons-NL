@@ -1,17 +1,17 @@
-var sermonsnl = {
+var sermons_nl = {
 	toggledetails : function(elm){
-		// check if any element has classname 'sermonsnl-open'
-		x = document.getElementById("sermonsnl_list").getElementsByClassName("sermonsnl-open");
+		// check if any element has classname 'sermons-nl-open'
+		x = document.getElementById("sermons_nl_list").getElementsByClassName("sermons-nl-open");
 		if(x.length > 0){
 			closeOnly = (elm == x[0]);
-			d = x[0].getElementsByClassName("sermonsnl-details")[0];
+			d = x[0].getElementsByClassName("sermons-nl-details")[0];
 			d.style.height = "0";
 			x[0].className = "";
 			if(closeOnly) return false;
 		}
-		d = elm.getElementsByClassName("sermonsnl-details")[0];
+		d = elm.getElementsByClassName("sermons-nl-details")[0];
 		d.style.height = d.firstChild.clientHeight + "px";
-		elm.className = "sermonsnl-open";
+		elm.className = "sermons-nl-open";
 		// check if element is in the viewport 
 		const rect = elm.getBoundingClientRect();
 		if(rect.top < 0){
@@ -22,7 +22,7 @@ var sermonsnl = {
 		return true;
 	},
 	stopPropagation : function(){
-		var d = document.getElementById("sermonsnl_list").getElementsByClassName("sermonsnl-details");
+		var d = document.getElementById("sermons_nl_list").getElementsByClassName("sermons-nl-details");
 		for(var i=0; i<d.length; i++){
 			d[i].onclick = function(e){ e.stopPropagation(); };
 		}
@@ -30,11 +30,11 @@ var sermonsnl = {
 	showmore : function(direction){
 		// get attributes
 		var data = {
-			action : "sermonsnl_showmore", 
+			action : "sermons_nl_showmore",
 			direction: direction,
 			datefmt : self.datefmt
 		};
-		x = document.getElementById("sermonsnl_list");
+		x = document.getElementById("sermons_nl_list");
 		if(direction=="up"){
 			data.current = x.firstChild.getAttribute("id");
 		}
@@ -42,28 +42,28 @@ var sermonsnl = {
 			data.current = x.childNodes[x.childNodes.length-1].getAttribute("id");
 		}
 		else{
-		    console.log("Error in sermonsNL.showmore(): wrong direction '" + direction + "' given.")
+		    console.log("Error in sermons_nl.showmore(): wrong direction '" + direction + "' given.")
 			return false;
 		}
 		this.showmorebutton(direction, "disable");
-		jQuery.get(sermonsnl.admin_url, data, function(response){
+		jQuery.get(sermons_nl.admin_url, data, function(response){
 			retval = JSON.parse(response);
-			if(!retval || retval.call != 'sermonsnl_showmore'){
-			    console.log("sermonsnl: unexpected response from sermonsnl.showmore()");
+			if(!retval || retval.call != 'sermons_nl_showmore'){
+			    console.log("sermons-nl: unexpected response from sermons_nl.showmore()");
 			    return false;
 			}
 			if(retval.error){
-			    console.log("SermonsNL " + retval.error);
+			    console.log("sermons-nl: " + retval.error);
 			    return false;
 			}else if(direction != retval.direction){
-			    console.log("SermonsNL Error: direction submitted is not the same as direction received back.");
+			    console.log("sermons-nl error: direction submitted is not the same as direction received back.");
 			    return false;
 			}else{
     			ul = document.createElement("ul");
 	    		ul.innerHTML = retval.html;
 	    		if(!ul.firstChild || ul.firstChild.tagName.toLowerCase() != 'li'){
 	    		    alert(ul.firstChild.tagName);
-	    		    console.log("SermonsNL Error: response does not contain list items.");
+	    		    console.log("sermons-nl error: response does not contain list items.");
 	    		    return false;
 	    		}
     			n = ul.childNodes.length;
@@ -78,19 +78,19 @@ var sermonsnl = {
     			}
     			if(retval.num_more_rec <= 0){
     			    // there are no more records in this direction
-    			    sermonsnl.showmorebutton(direction, 'remove');
+    			    sermons_nl.showmorebutton(direction, 'remove');
     			}
-    			sermonsnl.stopPropagation();
+    			sermons_nl.stopPropagation();
     			jQuery(document.body).trigger("post-load");
 			}
 		}, 'text').fail(function(jqXHR, textStatus, errorThrown){
 			console.log("Error " + textStatus + ": " + errorThrown);
 		}).always(function() {
-			sermonsnl.showmorebutton(direction, "enable");
+			sermons_nl.showmorebutton(direction, "enable");
 		});
 	},
 	showmorebutton : function(direction, what){
-		elm = document.getElementById("sermonsnl_more_"+(direction == "up" ? "up" : "down"));
+		elm = document.getElementById("sermons_nl_more_"+(direction == "up" ? "up" : "down"));
 		if(elm){
 			switch(what){
 				case "remove":
@@ -102,7 +102,7 @@ var sermonsnl = {
 				break;
 				case "enable":
 					elm.className="";
-					elm.onclick=function(event){ sermonsnl.showmore(direction); };
+					elm.onclick=function(event){ sermons_nl.showmore(direction); };
 				break;
 			}
 		}
@@ -112,25 +112,25 @@ var sermonsnl = {
 		// add to data which sermons are currently live. server will return data for these irrespective of whether they are still live
 		function _(s){
     		for(var i=0; i<s.length; i++){
-    		    if(s[i].hasAttribute('id') && !sermonsnl.checkstatus_ids.includes(s[i].getAttribute("id"))){
-    		        sermonsnl.checkstatus_ids[sermonsnl.checkstatus_ids.length] = s[i].getAttribute("id");
+    		    if(s[i].hasAttribute('id') && !sermons_nl.checkstatus_ids.includes(s[i].getAttribute("id"))){
+    		        sermons_nl.checkstatus_ids[sermons_nl.checkstatus_ids.length] = s[i].getAttribute("id");
     			}
     		}
 		}
-		_(document.getElementsByClassName('sermonsnl-audio-live'));
-		_(document.getElementsByClassName('sermonsnl-video-live'));
+		_(document.getElementsByClassName('sermons-nl-audio-live'));
+		_(document.getElementsByClassName('sermons-nl-video-live'));
 		
 		data = {
-		    action : 'sermonsnl_checkstatus',
-		    live : sermonsnl.checkstatus_ids,
-			check_list : (sermonsnl.check_list ? 1 : 0),
-			check_lone : (sermonsnl.check_lone ? 1 : 0),
-			datefmt : sermonsnl.datefmt
+		    action : 'sermons_nl_checkstatus',
+		    live : sermons_nl.checkstatus_ids,
+			check_list : (sermons_nl.check_list ? 1 : 0),
+			check_lone : (sermons_nl.check_lone ? 1 : 0),
+			datefmt : sermons_nl.datefmt
 		};
 		
-		jQuery.get(sermonsnl.admin_url, data, function(response){
-			if(response.call != 'sermonsnl_checkstatus'){
-			    console.log("sermonsnl: unexpected response from sermonsnl.checkstatus()");
+		jQuery.get(sermons_nl.admin_url, data, function(response){
+			if(response.call != 'sermons_nl_checkstatus'){
+			    console.log("sermons-nl: unexpected response from sermons_nl.checkstatus()");
 			    return false;
 			}
 			if(response.events_list != null){
@@ -154,7 +154,7 @@ var sermonsnl = {
 					}
 					else if(response.events_list[i].event_html){
 						new_timestamp = response.events_list[i].event_timestamp;
-						ul_obj = document.getElementById('sermonsnl_list');
+						ul_obj = document.getElementById('sermons_nl_list');
 						tmp_ul_obj = document.createElement('ul');
 						tmp_ul_obj.innerHTML = response.events_list[i].event_html;
 						new_li_obj = tmp_ul_obj.firstChild;
@@ -172,7 +172,7 @@ var sermonsnl = {
 							if(!added){
 								ul_obj.append(new_li_obj);
 							}
-							sermonsnl.stopPropagation();
+							sermons_nl.stopPropagation();
 						}
 					}
 				}
@@ -220,7 +220,7 @@ var sermonsnl = {
 			x = elm;
 			do{
 				x = x.parentNode;
-			}while(x.parentNode.className != "sermonsnl-details");
+			}while(x.parentNode.className != "sermons-nl-details");
 
 			// identify the containing list item
 			li = x;
@@ -312,14 +312,14 @@ var sermonsnl = {
 				this.players[this.playing] = {div: d, li: li, player: null, service: service};
 
 				if(!this.ytapi_loaded){
-					window.onYouTubePlayerAPIReady = function(){sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);};
+					window.onYouTubePlayerAPIReady = function(){sermons_nl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);};
 					// Load the IFrame Player API code asynchronously
 					var js = document.createElement('script');
 					js.src = "https://www.youtube.com/player_api";
 					document.head.appendChild(js);
 					this.ytapi_loaded = true;
 				}else{
-					sermonsnl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);
+					sermons_nl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);
 				}
 			}else if(service == 'kg-video' && isVideoLivestream){
 				i = document.createElement('iframe');
@@ -362,14 +362,14 @@ var sermonsnl = {
 						var css = document.createElement("link");
 						css.setAttribute("rel","stylesheet");
 						css.setAttribute("type","text/css");
-						css.setAttribute("href","https://vjs.zencdn.net/7.11.4/video-js.css");
+						css.setAttribute("href",sermons_nl.plugin_url+"/css/video-js.css");
 						document.head.appendChild(css);
 						var js = document.createElement('script');
 						js.onload = function(){
 							x.appendChild(d);
 							videojs(m, {});
 						}
-						js.src = 'https://vjs.zencdn.net/7.11.4/video.min.js';
+						js.src = sermons_nl.plugin_url+"/js/video.min.js";
 						document.head.appendChild(js);
 						this.vjs_loaded = true;
 					}
@@ -389,7 +389,7 @@ var sermonsnl = {
 	},
 	createYTplayer : function(player_id,yt_videoid,x,container_id,standalone){
 		// create the player
-		sermonsnl.players[player_id].player = new YT.Player(container_id, {
+		sermons_nl.players[player_id].player = new YT.Player(container_id, {
 			height: Math.round(x.clientWidth * 9/16),
 			width: x.clientWidth,
 			videoId: yt_videoid,
@@ -400,7 +400,7 @@ var sermonsnl = {
 		}
 	},
 	responsive_list : function(){
-		x = document.getElementById("sermonsnl_list");
+		x = document.getElementById("sermons_nl_list");
 		if(x.clientWidth < 750) x.className = "style-narrow";
 		else x.className = "";
 	},
@@ -414,24 +414,29 @@ var sermonsnl = {
 	onclick : null,
 	check_interval : Infinity,
 	admin_url : null,
+	plugin_url : null,
 	datefmt : 'short'
 }
 jQuery(document).ready(function($){
-	x_list = document.getElementById("sermonsnl_list");
-	x_events = document.getElementsByClassName("sermonsnl_event_lone");
-	x_items = document.getElementsByClassName("sermonsnl_item_lone");
+	x_list = document.getElementById("sermons_nl_list");
+	x_events = document.getElementsByClassName("sermons_nl_event_lone");
+	x_items = document.getElementsByClassName("sermons_nl_item_lone");
 
-	if((x_list != null || x_events.length > 0 || x_items.length > 0) && sermonsnl.check_interval > 0 && sermonsnl.check_interval != Infinity){
-		sermonsnl.check_list = (x_list != null);
-		sermonsnl.check_lone = (x_items.length > 0 || x_events.length > 0);
-		sermonsnl.timer = setInterval(sermonsnl.checkstatus, sermonsnl.check_interval*1000);
+	if((x_list != null || x_events.length > 0 || x_items.length > 0) && sermons_nl.check_interval > 0 && sermons_nl.check_interval != Infinity){
+		sermons_nl.check_list = (x_list != null);
+		sermons_nl.check_lone = (x_items.length > 0 || x_events.length > 0);
+		sermons_nl.timer = setInterval(sermons_nl.checkstatus, sermons_nl.check_interval*1000);
 	}
 	if(x_list != null){
 		// adjust width if needed
-		sermonsnl.responsive_list();
+		sermons_nl.responsive_list();
 		// this is to prevent closure of an item of the list when clicking on child elements
-		sermonsnl.stopPropagation();
+		sermons_nl.stopPropagation();
+		// get the right date format
+		if(x_list.hasAttribute('list-datefmt')){
+			sermons_nl.datefmt = x_list.getAttribute('list-datefmt');
+		}
 		// on resize check if narrow or normal style should be used
-		jQuery(window).resize(sermonsnl.responsive_list);
+		jQuery(window).resize(sermons_nl.responsive_list);
 	}
 });

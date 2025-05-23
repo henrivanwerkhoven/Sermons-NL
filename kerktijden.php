@@ -2,7 +2,7 @@
 
 if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
-class sermonsNL_kerktijden{
+class sermons_nl_kerktijden{
     
     // DATA OBJECT METHODS
     
@@ -19,12 +19,12 @@ class sermonsNL_kerktijden{
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         if($key == 'pastor'){
             if($this->pastor_id){
-                return sermonsNL_kerktijdenpastors::get_by_id($this->pastor_id)->pastor;
+                return sermons_nl_kerktijdenpastors::get_by_id($this->pastor_id)->pastor;
             }
         }
         if($key == 'town'){
             if($this->pastor_id){
-                return sermonsNL_kerktijdenpastors::get_by_id($this->pastor_id)->town;
+                return sermons_nl_kerktijdenpastors::get_by_id($this->pastor_id)->town;
             }
         }
         if($key == 'variables'){
@@ -39,7 +39,7 @@ class sermonsNL_kerktijden{
     
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->update(array($key => $value));
-        else wp_trigger_warning("sermonsNL_kerktijden::__set", "Trying to set non-existing key `$key` in object of class sermonsNL_kerktijden.", E_USER_WARNING);
+        else wp_trigger_warning("sermons_nl_kerktijden::__set", "Trying to set non-existing key `$key` in object of class sermons_nl_kerktijden.", E_USER_WARNING);
     }
     
     public function update($data){
@@ -53,17 +53,17 @@ class sermonsNL_kerktijden{
                 }
             }elseif($key == 'pastor'){
                 if(!empty($data['pastor_id'])){
-                    sermonsNL_kerktijdenpastors::add_if_not_exists(array('id'=>$data['pastor_id'], 'pastor'=>$data['pastor']));
+                    sermons_nl_kerktijdenpastors::add_if_not_exists(array('id'=>$data['pastor_id'], 'pastor'=>$data['pastor']));
                 }
                 unset($data[$key]);
             }else{
                 unset($data[$key]);
-                wp_trigger_error("sermonsNL_kerkomroep::update", "Trying to update non-existing key `$key` in object of sermonsNL_kerkomroep.", E_USER_WARNING);
+                wp_trigger_error("sermons_nl_kerkomroep::update", "Trying to update non-existing key `$key` in object of sermons_nl_kerkomroep.", E_USER_WARNING);
             }
         }
         if($update){
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->update($wpdb->prefix.'sermonsNL_kerktijden', $data, array('id' => $this->id));
+			$wpdb->update($wpdb->prefix.'sermons_nl_kerktijden', $data, array('id' => $this->id));
             return true;
         }
         return false;
@@ -72,7 +72,7 @@ class sermonsNL_kerktijden{
     public function delete(){
         global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete($wpdb->prefix.'sermonsNL_kerktijden', array('id' => $this->id));
+		$wpdb->delete($wpdb->prefix.'sermons_nl_kerktijden', array('id' => $this->id));
         unset(self::$items[$this->id]);
     }
 	
@@ -81,7 +81,7 @@ class sermonsNL_kerktijden{
 	        self::$items = array();
     	    global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden ORDER BY dt", OBJECT_K);
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_kerktijden ORDER BY dt", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	            if($object->event_id) self::$items_by_event[$object->event_id] = self::$items[$id];
@@ -95,7 +95,7 @@ class sermonsNL_kerktijden{
 	    if(!isset($kt[$id])){
 	        global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijden where id=%d",$id), OBJECT_K);
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermons_nl_kerktijden where id=%d",$id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -115,7 +115,7 @@ class sermonsNL_kerktijden{
 	public static function get_all_by_event_id(int $event_id){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE event_id=%d",$event_id));
+		$data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermons_nl_kerktijden WHERE event_id=%d",$event_id));
     	$ret = array();
     	foreach($data as $row){
     	    $ret[] = self::get_by_id($row->id);
@@ -127,11 +127,11 @@ class sermonsNL_kerktijden{
 	    global $wpdb;
 	    // the pastor name is saved separately
 	    if(!empty($data['pastor_id'])){
-    	    sermonsNL_kerktijdenpastors::add_if_not_exists(array('id'=>$data['pastor_id'], 'pastor'=>$data['pastor']));
+    	    sermons_nl_kerktijdenpastors::add_if_not_exists(array('id'=>$data['pastor_id'], 'pastor'=>$data['pastor']));
 	    }
 	    unset($data['pastor']);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$ok = $wpdb->insert($wpdb->prefix.'sermonsNL_kerktijden', $data);
+		$ok = $wpdb->insert($wpdb->prefix.'sermons_nl_kerktijden', $data);
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -144,7 +144,7 @@ class sermonsNL_kerktijden{
 		if($date_min > $date_max) return null;
 		if(!is_array($dt_list)) return null;
 		global $wpdb;
-		$q = "DELETE FROM {$wpdb->prefix}sermonsNL_kerktijden WHERE dt >= %s AND dt <= %s";
+		$q = "DELETE FROM {$wpdb->prefix}sermons_nl_kerktijden WHERE dt >= %s AND dt <= %s";
 		foreach($dt_list as $dt_existing){
 			$q .= " AND dt != %s";
 		}
@@ -158,7 +158,7 @@ class sermonsNL_kerktijden{
 	
 	public static function query_create_table($prefix, $charset_collate){
 	    global $wpdb;
-	    return "CREATE TABLE {$wpdb->prefix}sermonsNL_kerktijden (
+	    return "CREATE TABLE {$wpdb->prefix}sermons_nl_kerktijden (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
         event_id int(10) UNSIGNED NULL,
         dt datetime DEFAULT '1970-01-01 01:00:00' NOT NULL,
@@ -173,8 +173,8 @@ class sermonsNL_kerktijden{
     // METHODS TO LOAD NEW DATA FROM kerktijden.nl
     
 	public static function get_remote_data_forward(){
-	    $kt_id = get_option('sermonsNL_kerktijden_id');
-	    $weeks = get_option('sermonsNL_kerktijden_weeksahead');
+	    $kt_id = get_option('sermons_nl_kerktijden_id');
+	    $weeks = get_option('sermons_nl_kerktijden_weeksahead');
 		$url = "https://api.kerktijden.nl/api/gathering/GetGatheringsForWidget?communityId=" . $kt_id . "&weeks=" . $weeks;
 		$data = self::get_remote_data($url);
 		if(false === $data){
@@ -185,8 +185,8 @@ class sermonsNL_kerktijden{
 	}
 
 	public static function get_remote_data_backward(){
-	    $kt_id = get_option('sermonsNL_kerktijden_id');
-	    $weeks = get_option('sermonsNL_kerktijden_weeksback');
+	    $kt_id = get_option('sermons_nl_kerktijden_id');
+	    $weeks = get_option('sermons_nl_kerktijden_weeksback');
 	    $months = ceil($weeks / 13 * 3);
 		$data = array();
 		for($m=0; $m<=$months; $m++){
@@ -194,7 +194,7 @@ class sermonsNL_kerktijden{
 			$url = "https://api.kerktijden.nl/api/gathering/GetGatherings?communityId=" . $kt_id . "&month=" . $month;
 			$data_m = self::get_remote_data($url);
 			if(false === $data_m){
-				// presumably connection error, don't continue
+				// presumably connection error, logged by get_remote_data.
 				return false;
 			}
 			$data = array_merge($data_m, $data);
@@ -204,21 +204,26 @@ class sermonsNL_kerktijden{
 
 	public static function get_remote_data($url){
 		$data = array();
-		$api_str = file_get_contents($url);
+		$response = wp_remote_get($url);
+		if(wp_remote_retrieve_response_code($response) != 200){
+			sermons_nl::log("sermons_nl_kerktijden::get_remote_data", "Error: status=".wp_remote_retrieve_header($response,'status'));
+			return false;
+		}
+		$api_str = wp_remote_retrieve_body($response);
 		if(empty($api_str)){
-			sermonsNL::log("sermonsNL_kerktijden::get_remote_data", "Error: empty response.");
+			sermons_nl::log("sermons_nl_kerktijden::get_remote_data", "Error: empty response.");
 			return false;
 		}else{
 			$api_data = json_decode($api_str, true);
 			// if empty there are no sermons in that month
 			if(!empty($api_data)){
 				foreach($api_data as $item){
-				    $dt = new DateTime($item['startTime'], sermonsNL::$timezone_kt);
-				    $dt->setTimeZone(sermonsNL::$timezone_db); // save in UTC
+				    $dt = new DateTime($item['startTime'], sermons_nl::$timezone_kt);
+				    $dt->setTimeZone(sermons_nl::$timezone_db); // save in UTC
 					$data[count($data)] = array(
 						'dt' => $dt->format("Y-m-d H:i:s"),
 						'sermontype' => $item['gatheringTypes'][0]['name'],
-						'pastor' => (!empty($item['persons'][0]) ? sermonsNL_kerktijdenpastors::extract_pastor($item['persons'][0]) : NULL),
+						'pastor' => (!empty($item['persons'][0]) ? sermons_nl_kerktijdenpastors::extract_pastor($item['persons'][0]) : NULL),
 						'pastor_id' => (empty($item['persons'][0]['id']) ? NULL : $item['persons'][0]['id']),
 						'cancelled' => $item['cancelled']
 					);
@@ -239,9 +244,9 @@ class sermonsNL_kerktijden{
             $i = array_search($row['dt'], array_map(function($x){ return $x->dt; }, $local_data));
             if(false === $i){
                 // it is new, check for existing events
-                $event = sermonsNL_event::get_by_dt($row['dt']);
+                $event = sermons_nl_event::get_by_dt($row['dt']);
                 if(null === $event){
-                   $event = sermonsNL_event::add_record($row['dt']);
+                   $event = sermons_nl_event::add_record($row['dt']);
                 }
                 // create a new record
                 $row['event_id'] = $event->id;
@@ -263,7 +268,7 @@ class sermonsNL_kerktijden{
 
 }
 
-class sermonsNL_kerktijdenpastors{
+class sermons_nl_kerktijdenpastors{
     
     private static $items = null;
     
@@ -280,7 +285,7 @@ class sermonsNL_kerktijdenpastors{
     
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->data[$key] = $value;
-        else wp_trigger_warning("sermonsNL_kerktijdenpastors::__set", "Trying to set non-existing key `$key` in object of class sermonsNL_kerktijden.", E_USER_WARNING);
+        else wp_trigger_warning("sermons_nl_kerktijdenpastors::__set", "Trying to set non-existing key `$key` in object of class sermons_nl_kerktijden.", E_USER_WARNING);
     }
 
     public function update($data){
@@ -288,7 +293,7 @@ class sermonsNL_kerktijdenpastors{
             global $wpdb;
             // change pastor or town
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->update($wpdb->prefix.'sermonsNL_kerktijdenpastors', $data, array('id' => $this->id));
+			$wpdb->update($wpdb->prefix.'sermons_nl_kerktijdenpastors', $data, array('id' => $this->id));
             $this->pastor = $data['pastor'];
     	    $this->town = $data['town'];
         }
@@ -299,7 +304,7 @@ class sermonsNL_kerktijdenpastors{
 	        self::$items = array();
     	    global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors", OBJECT_K);
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_kerktijdenpastors", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	        }
@@ -312,7 +317,7 @@ class sermonsNL_kerktijdenpastors{
 	    if(!isset($pastors[$id])){
 	        global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors where id=%d",$id), OBJECT_K);
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermons_nl_kerktijdenpastors where id=%d",$id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -332,7 +337,7 @@ class sermonsNL_kerktijdenpastors{
 	public static function add_record($data){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$ok = $wpdb->insert($wpdb->prefix."sermonsNL_kerktijdenpastors", $data);
+		$ok = $wpdb->insert($wpdb->prefix."sermons_nl_kerktijdenpastors", $data);
 	    if($ok){
 	        return self::get_by_id($data['id']);
 	    }
@@ -341,7 +346,7 @@ class sermonsNL_kerktijdenpastors{
 	
 	public static function query_create_table($prefix, $charset_collate){
 	    global $wpdb;
-	    return "CREATE TABLE {$wpdb->prefix}sermonsNL_kerktijdenpastors (
+	    return "CREATE TABLE {$wpdb->prefix}sermons_nl_kerktijdenpastors (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
         pastor varchar(255) default '' NOT NULL,
         town varchar(255) default '' NOT NULL,
@@ -351,14 +356,14 @@ class sermonsNL_kerktijdenpastors{
 	
 	// METHOD TO VERIFY ALL PASTOR DATA (to be run regularly, i.e. with the daily update)
 	public static function get_remote_data(){
-	    $kt_id = get_option('sermonsNL_kerktijden_id');
+	    $kt_id = get_option('sermons_nl_kerktijden_id');
 	    // delete pastors that are not linked to a sermon
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results("SELECT p.id FROM {$wpdb->prefix}sermonsNL_kerktijdenpastors AS p LEFT JOIN {$wpdb->prefix}sermonsNL_kerktijden AS k ON k.pastor_id = p.id WHERE k.pastor_id IS NULL;", ARRAY_A);
+		$data = $wpdb->get_results("SELECT p.id FROM {$wpdb->prefix}sermons_nl_kerktijdenpastors AS p LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijden AS k ON k.pastor_id = p.id WHERE k.pastor_id IS NULL;", ARRAY_A);
 	    foreach($data as $row){
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->delete($wpdb->prefix . "sermonsNL_kerktijdenpastors", array('id' => $row['id']));
+			$wpdb->delete($wpdb->prefix . "sermons_nl_kerktijdenpastors", array('id' => $row['id']));
 	        // in case self::$items is alraedy defined, this avoid an attemt to next try to update a non-existing record
 	        unset(self::$items[$row['id']]); 
 	    }
@@ -368,8 +373,13 @@ class sermonsNL_kerktijdenpastors{
 		$failure = 0;
 	    foreach($pastors as $id => $pastor){
     		$url = "https://api.kerktijden.nl/api/person/getperson?id=". (int)$id;
-    		$api_str = file_get_contents($url);
-    		if(!empty($api_str)){
+			$response = wp_remote_get($url);
+			if(wp_remote_retrieve_response_code($response) != 200){
+				sermons_nl::log("sermons_nl_kerktijdenpastors::get_remote_data", "Error: status=".wp_remote_retrieve_header($response,'status'));
+				return false;
+			}
+			$api_str = wp_remote_retrieve_body($response);
+			if(!empty($api_str)){
     			$api_data = json_decode($api_str, true);
     			if(!empty($api_data)){
     				$new_data = array(
@@ -385,7 +395,7 @@ class sermonsNL_kerktijdenpastors{
 				$failure ++;
 			}
 		}
-		sermonsNL::log("sermonsNL_kerktijdenpastors::get_remote_data", "Pastor names updated: " . $success . " verified successfully" . ($failure ? "; ".$failure . " failed." : "."));
+		sermons_nl::log("sermons_nl_kerktijdenpastors::get_remote_data", "Pastor names updated: " . $success . " verified successfully" . ($failure ? "; ".$failure . " failed." : "."));
 	}
 
     // these functions pull pastor name and town, respectively, from the api data

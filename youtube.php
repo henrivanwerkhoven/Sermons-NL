@@ -2,7 +2,7 @@
 
 if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
-class sermonsNL_youtube{
+class sermons_nl_youtube{
     
     // DATA OBJECT METHODS
     
@@ -24,7 +24,7 @@ class sermonsNL_youtube{
 				return (!empty($this->data['dt_planned']) ? $this->data['dt_planned'] : $this->data['dt_actual']);
 			case 'event':
 				if($this->data['event_id'] === null) return null;
-				return sermonsNL_event::get_by_id($this->data['event_id']);
+				return sermons_nl_event::get_by_id($this->data['event_id']);
 			case 'type':
 				return 'youtube';
         }
@@ -54,7 +54,7 @@ class sermonsNL_youtube{
         }
         if($update){
             $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				$wpdb->prefix.'sermonsNL_youtube', $data, array('id' => $this->id)
+				$wpdb->prefix.'sermons_nl_youtube', $data, array('id' => $this->id)
 			);
             return true;
         }
@@ -64,7 +64,7 @@ class sermonsNL_youtube{
     public function delete(){
         global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete($wpdb->prefix.'sermonsNL_youtube', array('id' => $this->id));
+		$wpdb->delete($wpdb->prefix.'sermons_nl_youtube', array('id' => $this->id));
         unset(self::$items[$this->id]);
     }
 	
@@ -73,7 +73,7 @@ class sermonsNL_youtube{
 	        self::$items = array();
     	    global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube ORDER BY dt_actual,dt_planned", OBJECT_K);
+			$data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_youtube ORDER BY dt_actual,dt_planned", OBJECT_K);
 	        foreach($data as $id => $object){
 	            self::$items[$id] = new self($object);
 	            self::$items_by_video_id[$object->video_id] = self::$items[$id];
@@ -88,7 +88,7 @@ class sermonsNL_youtube{
 	    if(!isset($items[$id])){
 	        global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube where id=%d", $id), OBJECT_K);
+			$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermons_nl_youtube where id=%d", $id), OBJECT_K);
 	        if(empty($data)){
 	            return null;
 	        }
@@ -115,7 +115,7 @@ class sermonsNL_youtube{
 	public static function get_all_by_event_id(int $event_id){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_youtube WHERE event_id=%d",$event_id));
+		$data = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermons_nl_youtube WHERE event_id=%d",$event_id));
     	$ret = array();
     	foreach($data as $row){
     	    $ret[] = self::get_by_id($row->id);
@@ -126,7 +126,7 @@ class sermonsNL_youtube{
 	public static function get_live(){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where live=1", ARRAY_A);
+		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermons_nl_youtube where live=1", ARRAY_A);
 	    if(empty($data)){
 	        return null;
 	    }
@@ -136,7 +136,7 @@ class sermonsNL_youtube{
 	public static function get_planned(bool $include_all = false){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermonsNL_youtube where planned=1", ARRAY_A);
+		$data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermons_nl_youtube where planned=1", ARRAY_A);
 	    if($include_all){
 	        $ret = array();
 	        foreach($data as $row){
@@ -153,7 +153,7 @@ class sermonsNL_youtube{
 	public static function add_record($data){
 	    global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$ok = $wpdb->insert($wpdb->prefix.'sermonsNL_youtube', $data);
+		$ok = $wpdb->insert($wpdb->prefix.'sermons_nl_youtube', $data);
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -162,7 +162,7 @@ class sermonsNL_youtube{
 	
 	public static function query_create_table($prefix, $charset_collate){
 	    global $wpdb;
-	    return "CREATE TABLE {$wpdb->prefix}sermonsNL_youtube (
+	    return "CREATE TABLE {$wpdb->prefix}sermons_nl_youtube (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
         event_id int(10) UNSIGNED NULL,
         video_id char(11) DEFAULT '' NOT NULL,
@@ -212,8 +212,8 @@ class sermonsNL_youtube{
     public static function get_remote_update_all(){
         $data = self::get_all();
 		# delete too old items
-		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
-		$checkdate = new DateTime("now -{$yt_weeksback} weeks");
+		$weeksback = get_option('sermons_nl_youtube_weeksback');
+		$checkdate = new DateTime("now -{$weeksback} weeks");
 		foreach($data as $key => $item){
 			$item_dt = new DateTime($item->dt);
 			if($item_dt < $checkdate){
@@ -227,7 +227,7 @@ class sermonsNL_youtube{
             return self::get_remote_update($video_ids);
         }else{
             // logging: nothing to update
-			sermonsNL::log("YouTube:get_remote_update_all", "Nothing to update.");
+			sermons_nl::log("sermons_nl_youtube::get_remote_update_all", "Nothing to update.");
         }
     }
 
@@ -250,9 +250,9 @@ class sermonsNL_youtube{
 	            $dt = $local_item->dt;
 	            $dt2 = $local_item->dt_end;
 	            if(!$dt2) $dt2 = $dt;
-	            $event = sermonsNL_event::get_by_dt($dt, $dt2);
+	            $event = sermons_nl_event::get_by_dt($dt, $dt2);
 	            if(!$event){
-	                $event = sermonsNL_event::add_record($dt, $dt2);
+	                $event = sermons_nl_event::add_record($dt, $dt2);
 	            }else{
 	                $event->update_dt_min_max($dt, $dt2);
 	            }
@@ -282,7 +282,7 @@ class sermonsNL_youtube{
         }
         $_tot = count($remote_data);
         $_unc = $_tot - $_new - $_upd - $_del;
-		sermonsNL::log("YouTube:remote_to_local", "Obtained $_tot records from YouTube: $_new new items, $_upd updated, $_del deleted, and $_unc unchanged.");
+		sermons_nl::log("sermons_nl_youtube::remote_to_local", "Obtained $_tot records from YouTube: $_new new items, $_upd updated, $_del deleted, and $_unc unchanged.");
         return true;
 	}
     
@@ -290,9 +290,9 @@ class sermonsNL_youtube{
     // to retrieve data through the youtube api
 	private static function get_remote_search($n_records, $nextPageToken=NULL){
 		$max_records = 50;
-		$yt_key = get_option('sermonsNL_youtube_key');
-		$yt_channel = get_option('sermonsNL_youtube_channel');
-		$yt_weeksback = get_option('sermonsNL_youtube_weeksback');
+		$yt_key = get_option('sermons_nl_youtube_key');
+		$yt_channel = get_option('sermons_nl_youtube_channel');
+		$yt_weeksback = get_option('sermons_nl_youtube_weeksback');
 		$data = array();
 		
 		//$url = "https://www.googleapis.com/youtube/v3/search?key=$yt_key&channelId=$yt_channel&part=snippet,id&order=date&maxResults=" . min($n_records,$max_records) . (empty($nextPageToken) ? "" : "&pageToken=$nextPageToken");
@@ -319,6 +319,7 @@ class sermonsNL_youtube{
 		if(!empty($data)){
     		self::get_remote_details($data);
 			// check if date of last item is more than kt_weeksback weeks ago
+			// if it is, also check the before-last etc. and stop loading additional pages
 			$checkdate = new DateTime("now -{$yt_weeksback} weeks");
 			foreach(array_reverse(array_keys($data)) as $key){
 				$dt = $data[$key]['dt_actual'];
@@ -329,7 +330,8 @@ class sermonsNL_youtube{
 					unset($data[$key]);
 					$getmore = false;
 				}else{
-					# items higher up in the array will be more recent
+					# This one is later then $checkdate. Items higher up in the array will be even more recent.
+					# We don't need to check these but can just keep 'm all.
 					break;
 				}
 			}
@@ -351,7 +353,7 @@ class sermonsNL_youtube{
 
 	private static function get_remote_details(&$data){
 		// https://developers.google.com/youtube/v3/docs/videos/list
-		$yt_key = get_option('sermonsNL_youtube_key');
+		$yt_key = get_option('sermons_nl_youtube_key');
         $vids = array_map(function($x){return $x['video_id'];}, $data);
 		$path = "/youtube/v3/videos?part=liveStreamingDetails,snippet&id=".implode(',',$vids)."&key=".$yt_key;
 		$api_details = self::load_googleapis_url($path);
@@ -372,19 +374,19 @@ class sermonsNL_youtube{
 
 			// youtube includes the timezone ('Z') in the data, so no timezone indicator is needed
 			$dt_actual = (empty($sd['actualStartTime']) ? null : new DateTime($sd['actualStartTime'])); 
-			if($dt_actual) $dt_actual = $dt_actual->setTimezone(sermonsNL::$timezone_db)->format("Y-m-d H:i:s");
+			if($dt_actual) $dt_actual = $dt_actual->setTimezone(sermons_nl::$timezone_db)->format("Y-m-d H:i:s");
 			
 			$dt_planned = (empty($sd['scheduledStartTime']) ? null : new DateTime($sd['scheduledStartTime']));
-			if($dt_planned) $dt_planned = $dt_planned->setTimezone(sermonsNL::$timezone_db)->format("Y-m-d H:i:s"); 
+			if($dt_planned) $dt_planned = $dt_planned->setTimezone(sermons_nl::$timezone_db)->format("Y-m-d H:i:s");
 			
 			$planned = ($item['snippet']['liveBroadcastContent'] == 'upcoming' ? 1 : 0);
 			$live = ($item['snippet']['liveBroadcastContent'] == 'live' ? 1 : 0);
 
 			if(!empty($sd['actualEndTime'])){
 			    $dt_end = new DateTime($sd['actualEndTime']);
-			    if($dt_end) $dt_end = $dt_end->setTimezone(sermonsNL::$timezone_db)->format("Y-m-d H:i:s");
+			    if($dt_end) $dt_end = $dt_end->setTimezone(sermons_nl::$timezone_db)->format("Y-m-d H:i:s");
 			}else{
-    			$dt_end = ($live ? (new DateTime("now", sermonsNL::$timezone_db))->format("Y-m-d H:i:s") : null);
+    			$dt_end = ($live ? (new DateTime("now", sermons_nl::$timezone_db))->format("Y-m-d H:i:s") : null);
 			} 
 			$data[$i]['dt_actual'] = $dt_actual;
 			$data[$i]['dt_planned'] = $dt_planned;
@@ -398,79 +400,33 @@ class sermonsNL_youtube{
 	}
 
 	private static function load_googleapis_url($path){
-		/* load data from the youtube api using php naive functions for writing to and reading from an ssl socket */
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen
-		$fp = fsockopen("ssl://www.googleapis.com", 443, $error_code, $error_message);
-		if(!$fp){
-			sermonsNL::log(__CLASS__."::load_googleapis_url", "Could not connect to youtube api: $error_message (#$error_code)");
+		/* load data from the youtube api using the wordpress http api */
+		$response = wp_remote_get("https://www.googleapis.com".$path);
+		if(wp_remote_retrieve_response_code($response) != 200){
+			sermons_nl::log("sermons_nl_youtube::load_googleapis_url", "Error: status=".wp_remote_retrieve_header($response,'status'));
+			return false;
 		}
-		$out = "GET $path HTTP/1.1\r\n";
-		$out .= "Host: www.googleapis.com\r\n";
-		$out .= "Connection: Close\r\n\r\n";
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
-		fwrite($fp, $out);
+		$content = wp_remote_retrieve_body($response);
 
-		// read headers
-		$http_status = trim(fgets($fp, 128));
-		$headers = array();
-		while(!feof($fp)){
-			$line = fgets($fp, 128);
-			if(empty(trim($line))) break; // end of headers
-			$colon = strpos($line, ':');
-			$hname = strtolower(substr($line, 0, $colon));
-			$hvalue = trim(substr($line, $colon+1));
-			$headers[$hname] = $hvalue;
-		}
-		$chunked = (isset($headers['transfer-encoding']) && $headers['transfer-encoding'] == "chunked");
-
-		// read content
-		$content = "";
-		if($chunked){
-			$chunksize = false;
-			while(!feof($fp)){
-				if($chunksize === false){
-					$line = fgets($fp, 128);
-					$chunksize = hexdec(trim($line));
-				}elseif($chunksize > 0){
-					$readsize = min(512, $chunksize);
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread
-					$content .= fread($fp, $readsize);
-					$chunksize -= $readsize;
-					if($chunksize <= 0){
-						fgets($fp, 3); // skip newline at end of chunk
-						$chunksize = false;
-					}
-				}else{
-					break;
-				}
-			}
-		}else{
-			while(!feof($fp)){
-				$line = fgets($fp);
-				if($line !== false) $content .= $line;
-			}
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
-		fclose($fp);
 		// error handling
 		if(empty($content)){
-			sermonsNL::log(__CLASS__."::load_googleapis_url", "Error obtaining data from youtube api: empty response. Status code: $http_status");
+			sermons_nl::log("sermons_nl_youtube::load_googleapis_url", "Error obtaining data from youtube api: empty response. Status code: $http_status");
 			return false;
 		}
 		$api_data = json_decode($content, true);
 		if(null === $api_data){
-			sermonsNL::log(__CLASS__."::load_googleapis_url", "Error obtaining data from youtube api: no valid json response. Status code: $http_status");
+			sermons_nl::log("sermons_nl_youtube::load_googleapis_url", "Error obtaining data from youtube api: no valid json response. Status code: $http_status");
 			return false;
 		}
 		if(isset($api_data['error'])){
 			if($api_data['error']['code'] == 404) $msg = 'The channel cannot be found. Please check the YouTube channel ID in the configuration.';
 			elseif($api_data['error']['code'] == 400) $msg = 'API key not valid. Please check the YouTube api key in the configuration.';
 			else $msg = $api_data['error']['message'];
-			sermonsNL::log(__CLASS__."::load_googleapis_url", $api_data['error']['code'] . ": " . $msg);
+			sermons_nl::log("sermons_nl_youtube::load_googleapis_url", $api_data['error']['code'] . ": " . $msg);
 			return false;
 		}
 		if(!isset($api_data['items'])){
-			sermonsNL::log(__CLASS__."::get_remote_search", "The youtube api data did not include expected key 'items'.");
+			sermons_nl::log("sermons_nl_youtube::get_remote_search", "The youtube api data did not include expected key 'items'.");
 			return false;
 		}
 		// all ok, return data

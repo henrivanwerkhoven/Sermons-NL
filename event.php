@@ -2,7 +2,7 @@
 
 if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
-class sermonsNL_event{
+class sermons_nl_event{
     	// EVENT FUNCTIONS
 	
 	private static $events = null;
@@ -18,9 +18,9 @@ class sermonsNL_event{
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         switch($key){
             case 'variables': return array_keys($this->data);
-            case 'kerktijden': return sermonsNL_kerktijden::get_by_event_id($this->id);
-            case 'kerkomroep': return sermonsNL_kerkomroep::get_by_event_id($this->id);
-            case 'youtube': return sermonsNL_youtube::get_by_event_id($this->id);
+            case 'kerktijden': return sermons_nl_kerktijden::get_by_event_id($this->id);
+            case 'kerkomroep': return sermons_nl_kerkomroep::get_by_event_id($this->id);
+            case 'youtube': return sermons_nl_youtube::get_by_event_id($this->id);
             case 'items' : return array(
                     'kerktijden' => $this->kerktijden,
                     'kerkomroep' => $this->kerkomroep,
@@ -92,12 +92,12 @@ class sermonsNL_event{
             }
             else{
                 unset($data[$key]);
-                wp_trigger_error("sermonsNL::update", "Trying to update non-existing key `$key` in object of sermonsNL.", E_USER_WARNING);
+                wp_trigger_error("sermons_nl::update", "Trying to update non-existing key `$key` in object of sermons_nl.", E_USER_WARNING);
             }
         }
         if($update){
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-            $wpdb->update($wpdb->prefix.'sermonsNL_events', $data, array('id' => $this->id));
+            $wpdb->update($wpdb->prefix.'sermons_nl_events', $data, array('id' => $this->id));
             return true;
         }
         return false;
@@ -113,17 +113,17 @@ class sermonsNL_event{
     public function delete(){
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-        $wpdb->delete($wpdb->prefix.'sermonsNL_events', array('id' => $this->id));
+        $wpdb->delete($wpdb->prefix.'sermons_nl_events', array('id' => $this->id));
         unset(self::$events[$this->id]);
     }
     
     public function get_all_items(){
         $ret = array();
-        $kt = sermonsNL_kerktijden::get_all_by_event_id($this->id);
+        $kt = sermons_nl_kerktijden::get_all_by_event_id($this->id);
         if(!empty($kt)) $ret['kerktijden'] = $kt;
-        $ko = sermonsNL_kerkomroep::get_all_by_event_id($this->id);
+        $ko = sermons_nl_kerkomroep::get_all_by_event_id($this->id);
         if(!empty($ko)) $ret['kerkomroep'] = $ko;
-        $yt = sermonsNL_youtube::get_all_by_event_id($this->id);
+        $yt = sermons_nl_youtube::get_all_by_event_id($this->id);
         if(!empty($yt)) $ret['youtube'] = $yt;
         return $ret;
     }
@@ -133,7 +133,7 @@ class sermonsNL_event{
 	        self::$events = array();
     	    global $wpdb;
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-            $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermonsNL_events ORDER BY dt_min", OBJECT_K);
+            $data = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_events ORDER BY dt_min", OBJECT_K);
 	        foreach($data as $key => $object){
 	            self::$events[$key] = new self($object);
 	        }
@@ -146,7 +146,7 @@ class sermonsNL_event{
 	    if(!isset($events[$id])){
 	        global $wpdb;
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-            $record = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermonsNL_events where id=%d", $id), OBJECT_K);
+            $record = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}sermons_nl_events where id=%d", $id), OBJECT_K);
 	        if(empty($record)){
 	            return null;
 	        }
@@ -159,7 +159,7 @@ class sermonsNL_event{
 	    global $wpdb;
 	    if(null === $dt2) $dt2 = $dt;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-        $data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermonsNL_events WHERE dt_min<=%s AND dt_max>=%s", $dt2, $dt), ARRAY_A);
+        $data = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$wpdb->prefix}sermons_nl_events WHERE dt_min<=%s AND dt_max>=%s", $dt2, $dt), ARRAY_A);
 	    if(empty($data)) return null;
 	    if($include_all){
 	        $ret = array();
@@ -175,7 +175,7 @@ class sermonsNL_event{
 	    global $wpdb;
 	    if($dt2 === null) $dt2 = $dt;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-        $ok = $wpdb->insert($wpdb->prefix.'sermonsNL_events', array('dt_min'=>$dt, 'dt_max'=>$dt2));
+        $ok = $wpdb->insert($wpdb->prefix.'sermons_nl_events', array('dt_min'=>$dt, 'dt_max'=>$dt2));
 	    if($ok){
 	        return self::get_by_id($wpdb->insert_id);
 	    }
@@ -184,7 +184,7 @@ class sermonsNL_event{
 	
 	// SQL for creating database table
 	public static function query_create_table($prefix, $charset_collate){
-        return "CREATE TABLE {$prefix}sermonsNL_events (
+        return "CREATE TABLE {$prefix}sermons_nl_events (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
         dt_from enum('auto','manual','kerktijden','kerkomroep','youtube') DEFAULT 'auto' NOT NULL,
         dt_manual datetime NULL,

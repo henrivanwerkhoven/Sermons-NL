@@ -1,23 +1,23 @@
-.sermonsNL_settings table{
+.sermons-nl-settings table{
     border-spacing: 0;
     width: 600px;
     max-width: 100%;
 }
-.sermonsNL_settings tr>:nth-child(2){
+.sermons-nl-settings tr>:nth-child(2){
     width: 375px;
     max-width: 70%;
 }
-.sermonsNL_settings input[type="text"]{
+.sermons-nl-settings input[type="text"]{
     width: 100%;
 }
-.sermonsNL_settings td{
+.sermons-nl-settings td{
     padding: 4px;
 }
-.sermonsNL_settings tbody{
+.sermons-nl-settings tbody{
     border: 2px solid #b5b5b5;
 }
 
-.sermonsNL_settings div.help{
+.sermons-nl-settings div.help{
 	display: inline-block;
 	position: relative;
 	width:16px;
@@ -25,7 +25,7 @@
 	background-image: url("../img/hint.gif");
 	background-repeat: no-repeat;
 }
-.sermonsNL_settings .help > * {
+.sermons-nl-settings .help > * {
 	display:block;
 	min-width:250px;
 	position:absolute;
@@ -40,49 +40,49 @@
 	opacity: 0;
 	z-index:8;
 }
-.sermonsNL_settings .help:hover > * {
+.sermons-nl-settings .help:hover > * {
 	transition: transform 0s, opacity 0.2s;
 	transform: scale(1);
 	opacity:1;
 	z-index:9;
 }
 
-.sermonsNL_settings th{
+.sermons-nl-settings th{
 	padding-top: 10px;
 	text-align: left;
 }
-.sermonsNL_settings td{
+.sermons-nl-settings td{
 	vertical-align:top;
 }
-.sermonsNL_settings .ko_setting,
-.sermonsNL_settings .kg_setting{
+.sermons-nl-settings .ko_setting,
+.sermons-nl-settings .kg_setting{
 	display:none;
 }
-.sermonsNL_settings .uses-ko .ko_setting,
-.sermonsNL_settings .uses-kg .kg_setting{
+.sermons-nl-settings .uses-ko .ko_setting,
+.sermons-nl-settings .uses-kg .kg_setting{
 	display:table-row;
 }
 
-.sermonsNL_settings .collapsible_setting{
+.sermons-nl-settings .collapsible-setting{
     background-color: #f9f9f9;
 }
-.sermonsNL_settings .always_visible{
+.sermons-nl-settings .always-visible{
     background-color: #e5e5e5;
 }
-.sermonsNL_settings .collapsible_setting.condition{
+.sermons-nl-settings .collapsible-setting.condition{
     font-style: italic;
     font-size: 80%;
     background-color: #e5e5e5;
 }
-.sermonsNL_settings .settings_disabled .collapsible_setting{
+.sermons-nl-settings .settings-disabled .collapsible-setting{
     visibility:collapse;
 }
-.sermonsnl-log{
+.sermons-nl-log{
      background-color: white; 
      border: 1px solid #808080; 
      padding: 5px 5px 5px 40px;
 }
-.sermonsnl-log span{
+.sermons-nl-log span{
      color: #808080; 
      width: 30px; 
      display: block; 
@@ -92,42 +92,42 @@
      text-align: right; 
 }
 
-#sermonsnl_admin_table{
+#sermons_nl_admin_table{
     display: inline-block;
     min-width: 40%;
     vertical-align: top;
     margin-right: 20px;
 }
 
-#sermonsnl_events_table{
+#sermons_nl_events_table{
     width: 100%;
     border-spacing: 0;
     border: 1px solid #999999;
     background-color: #f5f5f5;
     margin-bottom: 20px;
 }
-#sermonsnl_events_table thead th{
+#sermons_nl_events_table thead th{
     border-bottom: 1px solid #aaaaaa;
 }
-#sermonsnl_events_table tbody>:nth-child(odd){
+#sermons_nl_events_table tbody>:nth-child(odd){
     background-color: #e5e5e5;
 }
-#sermonsnl_events_table td,
-#sermonsnl_events_table th{
+#sermons_nl_events_table td,
+#sermons_nl_events_table th{
     padding: 10px;
 }
-#sermonsnl_events_table th{
+#sermons_nl_events_table th{
     text-align: left;
 }
 
-#sermonsnl_waiting{
+#sermons_nl_waiting{
     visibility: hidden;
 }
-#sermonsnl_waiting.shown{
+#sermons_nl_waiting.shown{
     visibility: visible;
 }
 
-#sermonsnl_details_view{
+#sermons_nl_details_view{
     visibility: hidden;
     display: inline-block;
     vertical-align:top;
@@ -138,12 +138,12 @@
     min-width: 300px;
     max-width: 100%;
 }
-#sermonsnl_details_view.shown{
+#sermons_nl_details_view.shown{
     visibility: visible;
     position: relative;
 }
 
-.sermonsnl-closebtn{
+.sermons-nl-closebtn{
     position: absolute;
     top: 10px;
     right: 10px;
@@ -152,17 +152,17 @@
     height: 20px;
 }
 
-.sermonsnl-copyshort, .sermonsnl-linktoevent{
+.sermons-nl-copyshort, .sermons-nl-linktoevent{
     position: relative;
 }
-.sermonsnl-copyshort{
+.sermons-nl-copyshort{
     cursor: pointer;
 }
-.sermonsnl-copyshort img, .sermonsnl-linktoevent img{
+.sermons-nl-copyshort img, .sermons-nl-linktoevent img{
     width: 16px;
     height: 16px;
 }
-.sermonsnl-copyshort div, .sermonsnl-linktoevent div{
+.sermons-nl-copyshort div, .sermons-nl-linktoevent div{
     display: block;
     white-space: nowrap;
     visibility: hidden;
@@ -173,52 +173,52 @@
     padding: 2px;
     border: 1px solid black;
 }
-.sermonsnl-copyshort div{
+.sermons-nl-copyshort div{
     cursor: text;
 }
-.sermonsnl-linktoevent div{
+.sermons-nl-linktoevent div{
     right: 0;
 }
-.sermonsnl-copyshort:hover div, .sermonsnl-linktoevent:hover div{
+.sermons-nl-copyshort:hover div, .sermons-nl-linktoevent:hover div{
     visibility: visible;
 }
-.sermonsnl-copyshort div.copied{
+.sermons-nl-copyshort div.copied{
     background-color: #c0c0ff;
     border: 1px solid white;
 }
-.sermonsnl-copyshort span{
+.sermons-nl-copyshort span{
     cursor: text;
     border: 1px solid #aaaaaa;
     background-color: #ffffff;
     padding: 3px;
     line-height: 2; 
 }
-.sermonsnl-copyshort span.copied{
+.sermons-nl-copyshort span.copied{
     background-color: #c0c0ff;
     border: 1px solid #ffffff;
 }
-.sermonsnl-linktoevent li{
+.sermons-nl-linktoevent li{
     padding: 0;
     margin: 0;
     cursor: pointer;
 }
-.sermonsnl-linktoevent li:hover{
+.sermons-nl-linktoevent li:hover{
     text-decoration: underline;
 }
 
-.sermonsnl-container{
+.sermons-nl-container{
     display: inline-block;
     width: 49%;
     min-width: 400px;
     vertical-align: top;
 }
-.sermonsnl-container h3{
+.sermons-nl-container h3{
     margin: 0 5px;
     padding: 10px;
     background-color: #f3f3f3;
     border: 1px solid #aaaaaa;
 }
-.sermonsnl-container>div{
+.sermons-nl-container>div{
     margin: 0 5px;
     padding: 10px;
     background-color: #fcfcfc;
@@ -227,35 +227,35 @@
     margin-bottom: 20px;
 }
 
-.sermonsnl-abuttons a{
+.sermons-nl-abuttons a{
     padding: 3px;
     background-color: #f5f5f5;
     margin-right: 10px;
     border: 1px solid #aaaaaa;
 }
-.sermonsnl-abuttons a:hover{
+.sermons-nl-abuttons a:hover{
     background-color: #ffffff;
 }
 
-#sermonsnl_update_event table{
+#sermons_nl_update_event table{
     width:100%;
 }
-#sermonsnl_update_event input[type="text"]{
+#sermons_nl_update_event input[type="text"]{
     width:100%;
 }
-#sermonsnl_update_event textarea{
+#sermons_nl_update_event textarea{
     width: 100%;
     height: 100px;
 }
 
-.sermonsnl-manual-closed{
+.sermons-nl-manual-closed{
     visibility:collapse;
 }
 
-.sermonsnl-footnotes{
+.sermons-nl-footnotes{
 
 }
-#sermonsnl_event_errmsg{
+#sermons_nl_event_errmsg{
     border: 1px solid #ff0000;
     background-color: #ffd0d0;
     color: #ff0000;
@@ -263,7 +263,7 @@
     padding: 5px;
     text-align: center;
 }
-#sermonsnl_event_errmsg:empty{
+#sermons_nl_event_errmsg:empty{
     display:none;
 }
 
