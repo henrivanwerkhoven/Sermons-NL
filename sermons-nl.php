@@ -522,13 +522,45 @@ class sermons_nl{
             <div class="sermons-nl-container">
                 <h3>' . esc_html__("Frequently asked questions","sermons-nl") . ':</h3>
                 <div>';
-		$readme = file_get_contents(plugin_dir_path(__FILE__) . "readme.txt");
-		preg_match("/== Frequently Asked Questions ==(.*?)==/is", $readme, $matches);
-		$qa = preg_split("( =|= )", $matches[1]);
-		for($i=1; $i < count($qa); $i += 2){
+
+		$faq = array(
+			esc_html__("How do I start using the plugin?","sermons-nl") =>
+			esc_html__("After installing and activating the plugin, a page \"Sermons-NL\" is added to the main menu of your WP Admin. In the submenu \"Configuration\" you can enter the details of the services that you want to include. Specific instructions per service are provided there.","sermons-nl"),
+
+			esc_html__("How do I add a list of sermons to my website?","sermons-nl") =>
+			esc_html__("The plugin Sermons-NL uses shortcodes to add sermons to your website. For a complete list of sermons, you will find a shortcode builder on the landing page of the plugin, accessible via the main menu of the WP Admin. You can also add individual sermons or even separate broadcasts to your website. For this, navigate to the Administration submenu, find the relevant sermon or item, and click the copy icon for the shortcode. You can paste the shortcode on your page or in your message.","sermons-nl"),
+
+			esc_html__("We have broadcasted an event, but I don't want it to be listed under the sermons","sermons-nl") =>
+			esc_html__("You can do so by finding the event in the Administration submenu, and unticking the \"Include in sermons list\" option. Don't forget to press the Save button.
+If you want to prevent a planned broadcast to be listed under the sermons, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the  date and time of the planned broadcast. Untick the \"Inclde in sermons list\" option. Note that the \"Protect from automated deletion\" option should be on, especially if you create the manual event entry before the day of the broadcast, or else you will loose it overnight. As soon as the new broadcast is detected, the plugin will link it to this manual event and will avoid the creation of a new one.
+Note that you can include this broadcast on your website, for example in a news message, by using the event shortcode that you find in the Administration page.","sermons-nl"),
+
+			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?,","sermons-nl") =>
+			esc_html__("This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned sermon is not unambiguous. It is easy to fix afterwards. Go to the Administration submenu and find the sermon that has this error. You can first unlink the item that was not correctly linked. It will end up under the \"Unlinked items\". If the sermons has no other linked items, you can now delete it. Next, go to the unlinked items and link it to another sermon. Only sermons with the same date can be linked.","sermons-nl"),
+
+			esc_html__("Why does Sermons-NL not support Kerkdienst Gemist?","sermons-nl") =>
+			esc_html__("Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep is included, because the church for which the plugin was first developed uses that service. However, adding support for Kerkdienst Gemist is possible, I would really like to add it in one of the next releases. I welcome volunteers to test this functionality in a beta version if their church is using Kerkdienst Gemist and if they would love to use this plugin. For this, please visit the issue page and add your reaction or send an e-mail to the developer.","sermons-nl"),
+
+			esc_html__("Wordpress is occasionally responding very slow since I am using Sermons-NL. What can I do about it?","sermons-nl") =>
+			sprintf(
+				/* Translators: Opening and closing tags of url to instruction page. */
+				esc_html__('Please check if you are using cron jobs. Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs.  The recommended frequency of cron jobs for this Plugin is once every 15 minutes. Please check for example %1$s this instruction to disable cron in wordpress %2$s for instruction. If you are already using cron jobs and it is correctly configured, it is unlikely that the Sermons-NL plugin is slowing down your website.','sermons-nl'),
+				'<a href="https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs" target="_blank">',
+				'</a>'
+			),
+
+			esc_html__("I get [Sermons-NL invalid shortcode] on my site where a Sermons-NL shortcode was used","sermons-nl") =>
+			esc_html__("Shortcodes for standalone items may produce the error [invalid shortcode] for two reasons. If the error mentions (duplication), this means that you have multiple standalone items on the page, one of them is a duplication. The plugin doesn't allow you to include a standalone sermon and also a standalone item from the same sermon on one page as this will cause conflicts. A second possible explanation is that the standalone sermon or item that you have included does not exist (any more). Check the Administration submenu in your WP Admin for the correct shortcode.","sermons-nl"),
+
+			esc_html__("I encounter another problem with my plugin, what can I do to fix it?","sermons-nl") =>
+			esc_html__("Please visit the Log submenu in your WP Admin first to see if you can identify the reason for your problem. Check the settings if the Log indicates errors when obtaining data. If you are not able to fix the problem, please report it on the issue page of the plugin or e-mail to the developer while including as much detail as possible.","sermons-nl")
+
+		);
+
+		foreach($faq as $q => $a){
 			print '
-					<h4>' . esc_html($qa[$i]) . '</h4>
-					<p>' . nl2br(esc_html(trim($qa[$i+1]))) . '</p>';
+					<h4>' . $q . '</h4>
+					<p>' . nl2br($a) . '</p>';
 		}
 		print '
                 </div>

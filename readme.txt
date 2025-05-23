@@ -43,7 +43,7 @@ For all services, the plugin will only send the settings entered in the plugin's
 
 = How do I start using the plugin? =
 
-After installing the plugin, an item "Sermons-NL" is added to the main menu of your WP Admin. In the submenu "Configuration" you can enter the details of the services that you want to include. Specific instructions per service are provided there.
+After installing and activating the plugin, a page "Sermons-NL" is added to the main menu of your WP Admin. In the submenu "Configuration" you can enter the details of the services that you want to include. Specific instructions per service are provided there.
 
 = How do I add a list of sermons to my website? =
 
