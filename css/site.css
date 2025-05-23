@@ -58,15 +58,15 @@
 	background-repeat: no-repeat;
 }
 .sermons-nl-video{
-	background-image: url('../img/video2.gif');
+	background-image: url('../img/video.gif');
 	background-repeat: no-repeat;
 }
 .sermons-nl-video-live{
-	background-image: url('../img/video2_live.gif');
+	background-image: url('../img/video_live.gif');
 	background-repeat: no-repeat;
 }
 .sermons-nl-video-planned{
-	background-image: url('../img/video2_planned.gif');
+	background-image: url('../img/video_planned.gif');
 	background-repeat: no-repeat;
 }
 .sermons-nl-open .sermons-nl-av{
