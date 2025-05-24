@@ -4,9 +4,10 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: 
 	Description: List planned and broadcasted Dutch church services in a convenient way
-	Version: 0.3
+	Version: 1.0
 	Author: Henri van Werkhoven
-	Author URI: https://github.com/henrivanwerkhoven/Sermons-NL
+	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
+	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	License: GPL2
 	Text Domain: sermons-nl
 	Domain Path: /languages
@@ -16,7 +17,7 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
 class sermons_nl{
 
-	const PLUGIN_URL = "https://github.com/henrivanwerkhoven/Sermons-NL";
+	const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
 	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
 	const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
@@ -674,6 +675,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if($_GET['event_id'] === ""){
+			$event_id = null;
 			// show form to create new event
 		    $html = '
 		        <h3>
@@ -696,7 +698,7 @@ Note that you can include this broadcast on your website, for example in a news 
 			$html .= self::html_form_update_event($event);
 		}else{
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$event_id = absint($_GET['event_id']);
+			$event_id = (int)$_GET['event_id'];
     		$html = '
     		    <h3><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/close.gif" class="sermons-nl-closebtn" title="'.esc_html__("Close","sermons-nl").'" onclick="sermons_nl_admin.hide_details('.$event_id.');"/>';
     		if($event_id == 0){
@@ -744,7 +746,7 @@ Note that you can include this broadcast on your website, for example in a news 
             		            </td>
             		            <td>
             		                <a class="sermons-nl-linktoevent"><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/link.png"/> ' . esc_html__('Link to event','sermons-nl') . '<div><ul>';
-						$item_dt = new DateTime($item->dt, SermonsNL::$timezone_db);
+						$item_dt = new DateTime($item->dt, sermons_nl::$timezone_db);
 						$dt1 = $item_dt->format("Y-m-d 00:00:00");
 						$dt2 = $item_dt->format("Y-m-d 23:59:59");
             		    $events = sermons_nl_event::get_by_dt($dt1, $dt2, true);
@@ -1397,7 +1399,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		global $wpdb;
 
 		print '<div>
-        <h2>SermonsNL '.esc_html__('Log page','sermons-nl').'</h2>
+        <h2>'.esc_html__('Sermons-NL','sermons-nl').' '.esc_html__('Log page','sermons-nl').'</h2>
         <p>' .
         /* Translators: Number of log retention days. */
         sprintf(esc_html__('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions from the past %d days.','sermons-nl'), esc_html(self::LOG_RETENTION_DAYS)) . '</p>';

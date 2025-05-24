@@ -4,7 +4,7 @@ Donate link:
 Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
 Tested up to: 6.8
-Stable tag: 0.3
+Stable tag: 1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -100,6 +100,11 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Removing dependency on external script
 * Added documentation of external services
 
+= 1.0 =
+* Stable version
+* Fixes opening of unlinked items screen
+* Improved consistency of Dutch translation
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -111,3 +116,5 @@ Optimization following automated plugin review by Wordpress, and two bugs were f
 = 0.3 =
 Optimization following manual plugin review by Wordpress.
 
+= 1.0 =
+Official first stable version
