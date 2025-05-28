@@ -461,5 +461,6 @@ jQuery(document).ready(function($){
         $('#sermons_nl_datefmt').on('input', sermons_nl_admin.build_shortcode);
         $('#sermons_nl_more_buttons').click(sermons_nl_admin.build_shortcode);
         $('#sermons_nl_show_logo').click(sermons_nl_admin.build_shortcode);
+        $('.sermons-nl-colorpicker').wpColorPicker();
     }
 });
