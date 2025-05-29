@@ -1,13 +1,11 @@
 <?php
-
 /*
 	Plugin Name: Sermons-NL
-	Plugin URI: 
+	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	Description: List planned and broadcasted Dutch church services in a convenient way
-	Version: 1.0
+	Version: 1.1
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
-	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	License: GPL2
 	Text Domain: sermons-nl
 	Domain Path: /languages
@@ -18,10 +16,10 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-    const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
+	const V = '1.1'; // version to be used for scripts / style sheets
+	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
     const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
-    const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
-
+    const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
 
     // SETTINGS
     // timezones are defined at the end of this file
@@ -343,9 +341,9 @@ class sermons_nl{
 
 	public static function add_admin_scripts_and_styles($hook){
 	    if(strpos($hook,'sermons-nl') === false) return;
-	    wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.3');
+	    wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__).'css/admin.css', array(), self::V);
 		wp_enqueue_style('wp-color-picker');
-		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery','wp-color-picker'), '0.3', true);
+		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery','wp-color-picker'), self::V, true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl_admin.admin_url = "' . esc_url(admin_url('admin-ajax.php')) . '";sermons_nl_admin.nonce = "' . esc_attr(wp_create_nonce('sermons-nl-administration')) . '";');
 	}
 	
@@ -540,7 +538,7 @@ class sermons_nl{
 If you want to prevent a planned broadcast to be listed under the sermons, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the  date and time of the planned broadcast. Untick the \"Inclde in sermons list\" option. Note that the \"Protect from automated deletion\" option should be on, especially if you create the manual event entry before the day of the broadcast, or else you will loose it overnight. As soon as the new broadcast is detected, the plugin will link it to this manual event and will avoid the creation of a new one.
 Note that you can include this broadcast on your website, for example in a news message, by using the event shortcode that you find in the Administration page.","sermons-nl"),
 
-			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?,","sermons-nl") =>
+			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?","sermons-nl") =>
 			esc_html__("This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned sermon is not unambiguous. It is easy to fix afterwards. Go to the Administration submenu and find the sermon that has this error. You can first unlink the item that was not correctly linked. It will end up under the \"Unlinked items\". If the sermons has no other linked items, you can now delete it. Next, go to the unlinked items and link it to another sermon. Only sermons with the same date can be linked.","sermons-nl"),
 
 			esc_html__("Why does Sermons-NL not support Kerkdienst Gemist?","sermons-nl") =>
@@ -2188,7 +2186,7 @@ Note that you can include this broadcast on your website, for example in a news 
 
     // adds js and css to the site
     public static function add_site_scripts_and_styles(){
-		wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.3');
+		wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__) . 'css/site.css', array(), self::V);
 		$url = esc_url(plugin_dir_url(__FILE__));
 		$cs = array_map(function($k){
 			$c = get_option("sermons_nl_icon_color_".$k);
@@ -2205,7 +2203,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		$css .= sprintf($css_tpl, 'video-live', $url, $cs['live'], 'v');
 		$css .= sprintf($css_tpl, 'video-planned', $url, $cs['planned'], 'v');
 		wp_add_inline_style('sermons-nl', $css);
-		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.3', true);
+		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), self::V, true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl.admin_url = "' . esc_url(admin_url( 'admin-ajax.php')) . '"; sermons_nl.plugin_url = "' . esc_url(plugin_dir_url(__FILE__)) . '"; sermons_nl.check_interval = ' . esc_attr(self::CHECK_INTERVAL) . ';');
 	}
 
