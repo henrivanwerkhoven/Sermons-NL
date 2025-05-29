@@ -434,4 +434,3 @@ class sermons_nl_youtube{
 	}
 
 }
-?>

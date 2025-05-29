@@ -17,10 +17,10 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
 class sermons_nl{
 
-	const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
-	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
-	const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
+    const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
+    const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
+    const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
+    const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
 
 
     // SETTINGS
@@ -39,8 +39,11 @@ class sermons_nl{
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
         "sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
-		"sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
-		"sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0)
+        "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
+        "sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
+        "sermons_nl_icon_color_archive"             => array('type' => 'string',  'default' => '#000000'),
+        "sermons_nl_icon_color_planned"             => array('type' => 'string',  'default' => '#8c8c8c'),
+        "sermons_nl_icon_color_live"                => array('type' => 'string',  'default' => '#0000ff')
     );
 
 	public static function register_settings(){
@@ -341,7 +344,8 @@ class sermons_nl{
 	public static function add_admin_scripts_and_styles($hook){
 	    if(strpos($hook,'sermons-nl') === false) return;
 	    wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__).'css/admin.css', array(), '0.3');
-		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery'), '0.3', true);
+		wp_enqueue_style('wp-color-picker');
+		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/admin.js', array('jquery','wp-color-picker'), '0.3', true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl_admin.admin_url = "' . esc_url(admin_url('admin-ajax.php')) . '";sermons_nl_admin.nonce = "' . esc_attr(wp_create_nonce('sermons-nl-administration')) . '";');
 	}
 	
@@ -559,9 +563,14 @@ Note that you can include this broadcast on your website, for example in a news 
 		);
 
 		foreach($faq as $q => $a){
-			print '
-					<h4>' . $q . '</h4>
-					<p>' . nl2br($a) . '</p>';
+			# $q and $a are already escaped above which is needed for some because tags are included with sprintf
+			print '<h4>' .
+				// phpcs:ignore  WordPress.Security.EscapeOutput.OutputNotEscaped
+				$q .
+				'</h4><p>' .
+				// phpcs:ignore  WordPress.Security.EscapeOutput.OutputNotEscaped
+				nl2br($a) .
+				'</p>';
 		}
 		print '
                 </div>
@@ -1161,23 +1170,42 @@ Note that you can include this broadcast on your website, for example in a news 
         $yt_channel = get_option('sermons_nl_youtube_channel');
 		$yt_key = get_option('sermons_nl_youtube_key');
 		$yt_weeksback = get_option('sermons_nl_youtube_weeksback');
+		$color_archive = get_option('sermons_nl_icon_color_archive');
+		$color_planned = get_option('sermons_nl_icon_color_planned');
+		$color_live = get_option('sermons_nl_icon_color_live');
 
 		// return settings form
 		print '
 		<div class="sermons-nl-settings">
-			<h2>
-				' . esc_html__("Settings for church services", 'sermons-nl') . '
-				<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/waiting.gif" id="sermons_nl_waiting"/>
-			</h2>
+			<h2>' . esc_html__("Settings for church services", 'sermons-nl') .
+				/* icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ */
+				' <img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/waiting.gif" id="sermons_nl_waiting"/></h2>
 			<div id="sermons_nl_config_save_msg"></div>';
-			/* icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ */
+
 		print '
 			<form method="post" onsubmit="sermons_nl_admin.config_submit(this); return false;">
 				<input type="hidden" name="_wpnonce" value="' . esc_attr(wp_create_nonce('sermons-nl-administration')) . '"/>
 				<input type="hidden" name="action" value="sermons_nl_config_submit"/>';
 		print '
 				<table>
-				
+
+					<tbody id="color_settings">
+						<tr>
+							<th colspan="2">' . esc_html__("Audio and video icons","sermons-nl") . '</th>
+						</tr>
+						<tr class="always-visible">
+							<td>' . esc_html__("Color for past broadcasts","sermons-nl") . ':</td>
+							<td><input type="text" name="sermons_nl_icon_color_archive" id="sermons_nl_icon_color_archive" value="'.esc_attr($color_archive).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_archive"]["default"]) . '"/></td>
+						</tr>
+						<tr class="always-visible">
+							<td>' . esc_html__("Color for live broadcasts","sermons-nl") . ':</td>
+							<td><input type="text" name="sermons_nl_icon_color_live" id="sermons_nl_icon_color_live" value="'.esc_attr($color_live).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_live"]["default"]) . '"/></td>
+						</tr>
+						<tr class="always-visible">
+							<td>' . esc_html__("Color for planned broadcasts","sermons-nl") . ':</td>
+							<td><input type="text" name="sermons_nl_icon_color_planned" id="sermons_nl_icon_color_planned" value="'.esc_attr($color_planned).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_planned"]["default"]) . '"/></td>
+						</tr>
+					</tbody>
 					<tbody id="kerktijden_settings"' . ($kt_id ? '' : ' class="settings-disabled"') . '>
 						<tr>
 							<th colspan="2">Kerktijden.nl</th>
@@ -1658,8 +1686,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		if($kt_id){
 			$logos[] = array(
 				"url" => "https://www.kerktijden.nl/gemeente/$kt_id/",
-				"img" => "logo_kerktijden.jpg",
-				"svg" => "logo_kerktijden.svg",
+				"img" => "logo_kerktijden.svg",
 				"pad" => 9,
 				/* Translators: service type. */
 				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerktijden")
@@ -1668,8 +1695,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		if($ko_mp){
 			$logos[] = array(
 				"url" => "https://www.kerkomroep.nl/kerken/$ko_mp",
-				"img" => "logo_kerkomroep.png",
-				"svg" => "logo_kerkomroep.svg",
+				"img" => "logo_kerkomroep.svg",
 				"pad" => 11,
 				/* Translators: service type. */
 				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerkomroep")
@@ -1695,7 +1721,7 @@ Note that you can include this broadcast on your website, for example in a news 
 					' . esc_html__("Source:", "sermons-nl") . '<br/>';
 		foreach($logos as $link){
 			$html .= '
-					<a href="' . $link["url"] . '" target="_blank" title="'.$link["txt"].'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '"' . (!empty($link['svg']) ? ' srcset="' . plugin_dir_url(__FILE__) . 'img/' . $link['svg'] . '"' : ''). ' alt="' . $link["txt"] . '"' . (!empty($link['pad']) ? ' style="padding: '.$link['pad'].'px 0;"':'') . '/></a>';
+					<a href="' . $link["url"] . '" target="_blank" title="'.$link["txt"].'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '" alt="' . $link["txt"] . '"' . (!empty($link['pad']) ? ' style="padding: '.$link['pad'].'px 0;"':'') . '/></a>';
 		}
 		if($plugin_logo){
 			$html .= '
@@ -2163,6 +2189,22 @@ Note that you can include this broadcast on your website, for example in a news 
     // adds js and css to the site
     public static function add_site_scripts_and_styles(){
 		wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.3');
+		$url = esc_url(plugin_dir_url(__FILE__));
+		$cs = array_map(function($k){
+			$c = get_option("sermons_nl_icon_color_".$k);
+			if(!preg_match('/^#[0-9a-fA-F]{6}$/',$c)){
+				#fall back to default color
+				$c = self::OPTION_NAMES['sermons_nl_icon_color_'.$k]['default'];
+			}
+			return str_replace("#","",$c);
+		}, array('archive'=>'archive','live'=>'live','planned'=>'planned'));
+		$css_tpl = '.sermons-nl-%1$s{background-image: url("%2$sicon.php?c=%3$s&m=%4$s");} ';
+		$css = sprintf($css_tpl, 'audio', $url, $cs['archive'], 'a');
+		$css .= sprintf($css_tpl, 'audio-live', $url, $cs['live'], 'a');
+		$css .= sprintf($css_tpl, 'video', $url, $cs['archive'], 'v');
+		$css .= sprintf($css_tpl, 'video-live', $url, $cs['live'], 'v');
+		$css .= sprintf($css_tpl, 'video-planned', $url, $cs['planned'], 'v');
+		wp_add_inline_style('sermons-nl', $css);
 		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.3', true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl.admin_url = "' . esc_url(admin_url( 'admin-ajax.php')) . '"; sermons_nl.plugin_url = "' . esc_url(plugin_dir_url(__FILE__)) . '"; sermons_nl.check_interval = ' . esc_attr(self::CHECK_INTERVAL) . ';');
 	}
@@ -2210,8 +2252,7 @@ Note that you can include this broadcast on your website, for example in a news 
 			) $charset_collate;";
 		dbDelta($sql);
 
-        // set plugin options to null if they don't exist
-        // this tells that none of the broadcast media is active
+        // set plugin options to the default if they don't exist
         foreach(self::OPTION_NAMES as $opt_name => $args){
             if(null === get_option($opt_name, null)){
                 update_option($opt_name, (isset($args['default']) ? $args['default'] : null));
@@ -2337,5 +2378,3 @@ add_action('wp_ajax_nopriv_sermons_nl_showmore', array('sermons_nl','show_more')
 // ajax: check status
 add_action('wp_ajax_sermons_nl_checkstatus', array('sermons_nl','check_status'));
 add_action('wp_ajax_nopriv_sermons_nl_checkstatus', array('sermons_nl','check_status'));
-
-?>

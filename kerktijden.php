@@ -416,5 +416,3 @@ class sermons_nl_kerktijdenpastors{
 	}
 	
 }
-
-?>
