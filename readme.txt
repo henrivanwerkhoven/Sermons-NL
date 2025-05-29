@@ -4,7 +4,7 @@ Donate link:
 Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
 Tested up to: 6.8
-Stable tag: 1.0
+Stable tag: 1.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -105,6 +105,9 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Fixes opening of unlinked items screen
 * Improved consistency of Dutch translation
 
+= 1.1 =
+* Added plugin settings for color of the audio/video icons
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -118,3 +121,6 @@ Optimization following manual plugin review by Wordpress.
 
 = 1.0 =
 Official first stable version
+
+= 1.1 =
+Audio/video icon color settings
