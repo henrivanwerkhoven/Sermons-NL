@@ -45,8 +45,8 @@
 }
 .sermons-nl-av{
 	display: inline-block;
-	width:30px;
-	height:25px;
+	width:25px;
+	height:20px;
 }
 
 .sermons-nl-open .sermons-nl-av{
@@ -64,7 +64,7 @@
 .sermons-nl-video,
 .sermons-nl-video-live,
 .sermons-nl-video-planned{
-	background-repeat: no-repeat;
+	background: 0 0/20px 20px no-repeat;
 }
 
 p.sermons-nl-audio,
@@ -72,16 +72,16 @@ p.sermons-nl-audio-live,
 p.sermons-nl-video,
 p.sermons-nl-video-live,
 p.sermons-nl-video-planned{
-	width: 210px;
-	height: 25px;
+	width: 200px;
+	height: 20px;
 }
 p.sermons-nl-audio a,
 p.sermons-nl-audio-live a,
 p.sermons-nl-video a,
 p.sermons-nl-video-planned a,
 p.sermons-nl-video-live a{
-	padding-left: 30px;
-	line-height:25px;
+	padding-left: 25px;
+	line-height:20px;
 }
 
 .sermons-nl-description{

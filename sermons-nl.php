@@ -563,9 +563,14 @@ Note that you can include this broadcast on your website, for example in a news 
 		);
 
 		foreach($faq as $q => $a){
-			print '
-					<h4>' . $q . '</h4>
-					<p>' . nl2br($a) . '</p>';
+			# $q and $a are already escaped above which is needed for some because tags are included with sprintf
+			print '<h4>' .
+				// phpcs:ignore  WordPress.Security.EscapeOutput.OutputNotEscaped
+				$q .
+				'</h4><p>' .
+				// phpcs:ignore  WordPress.Security.EscapeOutput.OutputNotEscaped
+				nl2br($a) .
+				'</p>';
 		}
 		print '
                 </div>
@@ -1190,15 +1195,15 @@ Note that you can include this broadcast on your website, for example in a news 
 						</tr>
 						<tr class="always-visible">
 							<td>' . esc_html__("Color for past broadcasts","sermons-nl") . ':</td>
-							<td><input type="text" name="sermons_nl_icon_color_archive" id="sermons_nl_icon_color_archive" value="'.esc_attr($color_archive).'" class="sermons-nl-colorpicker" data-default-color="' . self::OPTION_NAMES["sermons_nl_icon_color_archive"]["default"] . '"/></td>
+							<td><input type="text" name="sermons_nl_icon_color_archive" id="sermons_nl_icon_color_archive" value="'.esc_attr($color_archive).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_archive"]["default"]) . '"/></td>
 						</tr>
 						<tr class="always-visible">
 							<td>' . esc_html__("Color for live broadcasts","sermons-nl") . ':</td>
-							<td><input type="text" name="sermons_nl_icon_color_live" id="sermons_nl_icon_color_live" value="'.esc_attr($color_live).'" class="sermons-nl-colorpicker" data-default-color="' . self::OPTION_NAMES["sermons_nl_icon_color_live"]["default"] . '"/></td>
+							<td><input type="text" name="sermons_nl_icon_color_live" id="sermons_nl_icon_color_live" value="'.esc_attr($color_live).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_live"]["default"]) . '"/></td>
 						</tr>
 						<tr class="always-visible">
 							<td>' . esc_html__("Color for planned broadcasts","sermons-nl") . ':</td>
-							<td><input type="text" name="sermons_nl_icon_color_planned" id="sermons_nl_icon_color_planned" value="'.esc_attr($color_planned).'" class="sermons-nl-colorpicker" data-default-color="' . self::OPTION_NAMES["sermons_nl_icon_color_planned"]["default"] . '"/></td>
+							<td><input type="text" name="sermons_nl_icon_color_planned" id="sermons_nl_icon_color_planned" value="'.esc_attr($color_planned).'" class="sermons-nl-colorpicker" data-default-color="' . esc_attr(self::OPTION_NAMES["sermons_nl_icon_color_planned"]["default"]) . '"/></td>
 						</tr>
 					</tbody>
 					<tbody id="kerktijden_settings"' . ($kt_id ? '' : ' class="settings-disabled"') . '>
@@ -2373,5 +2378,3 @@ add_action('wp_ajax_nopriv_sermons_nl_showmore', array('sermons_nl','show_more')
 // ajax: check status
 add_action('wp_ajax_sermons_nl_checkstatus', array('sermons_nl','check_status'));
 add_action('wp_ajax_nopriv_sermons_nl_checkstatus', array('sermons_nl','check_status'));
-
-?>

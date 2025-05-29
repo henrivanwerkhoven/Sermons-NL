@@ -203,5 +203,3 @@ class sermons_nl_event{
     }
 
 }
-
-?>
