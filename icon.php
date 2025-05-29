@@ -15,7 +15,7 @@ if($_GET['m'] == 'a'){
     $svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\">".
     "<g fill=\"{$color}\">".
     "<rect x=\"0\" y=\"8\" width=\"4.3\" height=\"9\" rx=\"1\" ry=\"1\"/>".
-    "<polygon points=\"6,8.4 6,16.6 14,25 14,0\"/>".
+    "<polygon points=\"6,8.4 6,16.6 13,25 14,25 14,0 13,0\"/>".
     "</g>".
     "<g fill=\"none\" stroke=\"{$color}\" stroke-width=\"1.7\" stroke-linecap=\"round\">".
     "<path d=\"M18 2 Q30 12.5 18 23\"/>".
