@@ -1,10 +1,10 @@
 <?php
 if(defined('ABSPATH')){
     // this script should be called directly as an image, it does not require the wordpress lib
-    // the script will output an svg image or a status-400 bad request if the wrong parameters are provided
-    header("HTTP/1.1 400 Bad Request");
+    header("HTTP/1.1 500 Internal Server Error");
     die("Do not include/require icon.php from wordpress");
 }
+// the script will output an svg image or a status-400 bad request if the wrong parameters are provided
 if(!isset($_GET['c']) || !preg_match("/^[0-9a-fA-F]{6}\$/", $_GET['c']) || !isset($_GET['m']) || !($_GET['m'] == 'a' || $_GET['m'] == 'v')){
     // $_GET['c'] should be a hexadecimal color without the #
     // $_GET['m'] should be 'a' or 'v'
