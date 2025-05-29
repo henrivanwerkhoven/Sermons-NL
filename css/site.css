@@ -59,20 +59,12 @@
 	padding: 10px;
 }
 
-.sermons-nl-audio{
-	background: url('../img/audio.png') no-repeat;
-}
-.sermons-nl-audio-live{
-	background: url('../img/audio-live.png') no-repeat;
-}
-.sermons-nl-video{
-	background: url('../img/video.png') no-repeat;
-}
-.sermons-nl-video-live{
-	background: url('../img/video-live.png') no-repeat;
-}
+.sermons-nl-audio,
+.sermons-nl-audio-live,
+.sermons-nl-video,
+.sermons-nl-video-live,
 .sermons-nl-video-planned{
-	background: url('../img/video-planned.png') no-repeat;
+	background-repeat: no-repeat;
 }
 
 p.sermons-nl-audio,
