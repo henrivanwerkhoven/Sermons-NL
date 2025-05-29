@@ -389,7 +389,7 @@ var sermons_nl_admin = {
             shortcode = shortcode.replace(']', ' more-buttons=1]');
         }
         if(logo_obj.checked){
-            shortcode = shortcode.replace(']', ' sermons-nl-logo=1]');
+            shortcode = shortcode.replace(']', ' plugin-logo=1]');
         }
         target_obj.innerText = shortcode;
         return true;
