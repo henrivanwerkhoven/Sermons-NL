@@ -1681,8 +1681,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		if($kt_id){
 			$logos[] = array(
 				"url" => "https://www.kerktijden.nl/gemeente/$kt_id/",
-				"img" => "logo_kerktijden.jpg",
-				"svg" => "logo_kerktijden.svg",
+				"img" => "logo_kerktijden.svg",
 				"pad" => 9,
 				/* Translators: service type. */
 				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerktijden")
@@ -1691,8 +1690,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		if($ko_mp){
 			$logos[] = array(
 				"url" => "https://www.kerkomroep.nl/kerken/$ko_mp",
-				"img" => "logo_kerkomroep.png",
-				"svg" => "logo_kerkomroep.svg",
+				"img" => "logo_kerkomroep.svg",
 				"pad" => 11,
 				/* Translators: service type. */
 				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerkomroep")
@@ -1718,7 +1716,7 @@ Note that you can include this broadcast on your website, for example in a news 
 					' . esc_html__("Source:", "sermons-nl") . '<br/>';
 		foreach($logos as $link){
 			$html .= '
-					<a href="' . $link["url"] . '" target="_blank" title="'.$link["txt"].'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '"' . (!empty($link['svg']) ? ' srcset="' . plugin_dir_url(__FILE__) . 'img/' . $link['svg'] . '"' : ''). ' alt="' . $link["txt"] . '"' . (!empty($link['pad']) ? ' style="padding: '.$link['pad'].'px 0;"':'') . '/></a>';
+					<a href="' . $link["url"] . '" target="_blank" title="'.$link["txt"].'"><img src="' . plugin_dir_url(__FILE__) . 'img/' . $link['img'] . '" alt="' . $link["txt"] . '"' . (!empty($link['pad']) ? ' style="padding: '.$link['pad'].'px 0;"':'') . '/></a>';
 		}
 		if($plugin_logo){
 			$html .= '
@@ -2190,17 +2188,15 @@ Note that you can include this broadcast on your website, for example in a news 
 		$color_archive = str_replace("#","",get_option("sermons_nl_icon_color_archive"));
 		$color_live = str_replace("#","",get_option("sermons_nl_icon_color_live"));
 		$color_planned = str_replace("#","",get_option("sermons_nl_icon_color_planned"));
-		if(class_exists("Imagick")){
-			$css_pattern = '.sermons-nl-%1$s{ background: url("%s$sicon.php?c=%3$s&m=%4$s&p") no-repeat; background-image: url("%2$sicon.php?c=%3$s&m=%4$s"); } ';
-		}else{
-			$css_pattern = '.sermons-nl-%1$s{ background: url(../img/%1$s.png) no-repeat; background-image: url("%2$sicon.php?c=%3$s&m=%4$s"); } ';
+		if(preg_match('/^[0-9a-fA-F]{6}$/',$color_archive) && preg_match('/^[0-9a-fA-F]{6}$/',$color_live) && preg_match('/^[0-9a-fA-F]{6}$/',$color_planned)){
+			$css_pattern = '.sermons-nl-%1$s{background-image: url("%2$sicon.php?c=%3$s&m=%4$s");} ';
+			$css = sprintf($css_pattern, 'audio', $url, $color_archive, 'a');
+			$css .= sprintf($css_pattern, 'audio-live', $url, $color_live, 'a');
+			$css .= sprintf($css_pattern, 'video', $url, $color_archive, 'v');
+			$css .= sprintf($css_pattern, 'video-live', $url, $color_live, 'v');
+			$css .= sprintf($css_pattern, 'video-planned', $url, $color_planned, 'v');
+			wp_add_inline_style('sermons-nl', $css);
 		}
-		$css = sprintf($css_pattern, 'audio', $url, $color_archive, 'a');
-		$css .= sprintf($css_pattern, 'audio-live', $url, $color_live, 'a');
-		$css .= sprintf($css_pattern, 'video', $url, $color_archive, 'v');
-		$css .= sprintf($css_pattern, 'video-live', $url, $color_live, 'v');
-		$css .= sprintf($css_pattern, 'video-planned', $url, $color_planned, 'v');
-		wp_add_inline_style('sermons-nl', $css);
 		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.3', true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl.admin_url = "' . esc_url(admin_url( 'admin-ajax.php')) . '"; sermons_nl.plugin_url = "' . esc_url(plugin_dir_url(__FILE__)) . '"; sermons_nl.check_interval = ' . esc_attr(self::CHECK_INTERVAL) . ';');
 	}

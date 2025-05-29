@@ -33,23 +33,6 @@ if($_GET['m'] == 'a'){
     "</g>".
     "</svg>";
 }
-if(isset($_GET['p'])){
-    // make png
-    if(class_exists("Imagick")){
-        $image = new Imagick();
-        $image->setBackgroundColor(new ImagickPixel('transparent'));
-        $image->readImageBlob($svg);
-        $image->setImageFormat("png64");
-        header("Content-type: image/png");
-        //header("Cache-Control: public, max-age=604800"); # 7 days
-        echo $image;
-        exit;
-    }
-    header("HTTP/1.1 404 Not Found");
-    print "No Imagick extension activated on this server.";
-    exit;
-}
-// make svg
+// output svg
 header("Content-Type: image/svg+xml");
-//header("Cache-Control: public, max-age=604800"); # 7 days
 die($svg);
