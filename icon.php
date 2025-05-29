@@ -2,14 +2,15 @@
 if(defined('ABSPATH')){
     // this script should be called directly as an image, it does not require the wordpress lib
     // the script will output an svg image or a status-400 bad request if the wrong parameters are provided
-    exit;
+    header("HTTP/1.1 400 Bad Request");
+    die("Do not include/require icon.php from wordpress");
 }
 if(!isset($_GET['c']) || !preg_match("/^[0-9a-fA-F]{6}\$/", $_GET['c']) || !isset($_GET['m']) || !($_GET['m'] == 'a' || $_GET['m'] == 'v')){
     // $_GET['c'] should be a hexadecimal color without the #
     // $_GET['m'] should be 'a' or 'v'
     // checking the input will prevent malicious input
     header("HTTP/1.1 400 Bad Request");
-    die("Requested color format or media type not supported.");
+    die("Requested color or media type not supported.");
 }
 $color = '#'.$_GET['c'];
 $svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\">";
