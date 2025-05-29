@@ -17,10 +17,10 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 
 class sermons_nl{
 
-	const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
-	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
-	const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
+    const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
+    const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
+    const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
+    const CHECK_INTERVAL = 60; /* check for live broadcasts each x seconds with json query; this might become a setting later */
 
 
     // SETTINGS
@@ -39,11 +39,11 @@ class sermons_nl{
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
         "sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
-		"sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
-		"sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
-		"sermons_nl_icon_color_archive"             => array('type' => 'string',  'default' => '#000000'),
-		"sermons_nl_icon_color_planned"             => array('type' => 'string',  'default' => '#8c8c8c'),
-		"sermons_nl_icon_color_live"                => array('type' => 'string',  'default' => '#0000ff')
+        "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
+        "sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
+        "sermons_nl_icon_color_archive"             => array('type' => 'string',  'default' => '#000000'),
+        "sermons_nl_icon_color_planned"             => array('type' => 'string',  'default' => '#8c8c8c'),
+        "sermons_nl_icon_color_live"                => array('type' => 'string',  'default' => '#0000ff')
     );
 
 	public static function register_settings(){
@@ -2185,18 +2185,21 @@ Note that you can include this broadcast on your website, for example in a news 
     public static function add_site_scripts_and_styles(){
 		wp_enqueue_style('sermons-nl', plugin_dir_url(__FILE__) . 'css/site.css', array(), '0.3');
 		$url = esc_url(plugin_dir_url(__FILE__));
-		$color_archive = str_replace("#","",get_option("sermons_nl_icon_color_archive"));
-		$color_live = str_replace("#","",get_option("sermons_nl_icon_color_live"));
-		$color_planned = str_replace("#","",get_option("sermons_nl_icon_color_planned"));
-		if(preg_match('/^[0-9a-fA-F]{6}$/',$color_archive) && preg_match('/^[0-9a-fA-F]{6}$/',$color_live) && preg_match('/^[0-9a-fA-F]{6}$/',$color_planned)){
-			$css_pattern = '.sermons-nl-%1$s{background-image: url("%2$sicon.php?c=%3$s&m=%4$s");} ';
-			$css = sprintf($css_pattern, 'audio', $url, $color_archive, 'a');
-			$css .= sprintf($css_pattern, 'audio-live', $url, $color_live, 'a');
-			$css .= sprintf($css_pattern, 'video', $url, $color_archive, 'v');
-			$css .= sprintf($css_pattern, 'video-live', $url, $color_live, 'v');
-			$css .= sprintf($css_pattern, 'video-planned', $url, $color_planned, 'v');
-			wp_add_inline_style('sermons-nl', $css);
-		}
+		$cs = array_map(function($k){
+			$c = get_option("sermons_nl_icon_color_".$k);
+			if(!preg_match('/^#[0-9a-fA-F]{6}$/',$c)){
+				#fall back to default color
+				$c = self::OPTION_NAMES['sermons_nl_icon_color_'.$k]['default'];
+			}
+			return str_replace("#","",$c);
+		}, array('archive'=>'archive','live'=>'live','planned'=>'planned'));
+		$css_tpl = '.sermons-nl-%1$s{background-image: url("%2$sicon.php?c=%3$s&m=%4$s");} ';
+		$css = sprintf($css_tpl, 'audio', $url, $cs['archive'], 'a');
+		$css .= sprintf($css_tpl, 'audio-live', $url, $cs['live'], 'a');
+		$css .= sprintf($css_tpl, 'video', $url, $cs['archive'], 'v');
+		$css .= sprintf($css_tpl, 'video-live', $url, $cs['live'], 'v');
+		$css .= sprintf($css_tpl, 'video-planned', $url, $cs['planned'], 'v');
+		wp_add_inline_style('sermons-nl', $css);
 		wp_enqueue_script('sermons-nl', plugin_dir_url(__FILE__) . 'js/site.js', array('jquery'), '0.3', true);
 		wp_add_inline_script('sermons-nl', 'sermons_nl.admin_url = "' . esc_url(admin_url( 'admin-ajax.php')) . '"; sermons_nl.plugin_url = "' . esc_url(plugin_dir_url(__FILE__)) . '"; sermons_nl.check_interval = ' . esc_attr(self::CHECK_INTERVAL) . ';');
 	}
