@@ -251,7 +251,8 @@ class sermons_nl_youtube{
 	            $dt2 = $local_item->dt_end;
 	            if(!$dt2) $dt2 = $dt;
 	            $event = sermons_nl_event::get_by_dt($dt, $dt2);
-	            if(!$event){
+				// if there is no event within this time window, or if the event already contains a youtube item, create a new one.
+	            if(!$event || $event->youtube !== NULL){
 	                $event = sermons_nl_event::add_record($dt, $dt2);
 	            }else{
 	                $event->update_dt_min_max($dt, $dt2);

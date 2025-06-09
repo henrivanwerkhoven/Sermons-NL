@@ -172,6 +172,7 @@
     background-color: white;
     padding: 2px;
     border: 1px solid black;
+    transition: visibility 0.2s;
 }
 .sermons-nl-copyshort div{
     cursor: text;
@@ -198,11 +199,17 @@
     border: 1px solid #ffffff;
 }
 .sermons-nl-linktoevent li{
-    padding: 0;
+    padding: 2px 0;
     margin: 0;
+}
+.sermons-nl-linktoevent li.linkable{
     cursor: pointer;
 }
-.sermons-nl-linktoevent li:hover{
+.sermons-nl-linktoevent .nonlinkable{
+    color: #606060;
+    font-style: italic;
+}
+.sermons-nl-linktoevent li.linkable:hover{
     text-decoration: underline;
 }
 

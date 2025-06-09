@@ -16,7 +16,7 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.1'; // version to be used for scripts / style sheets
+	const V = '1.1.3'; // version to be used for scripts / style sheets
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
     const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
     const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
@@ -736,7 +736,7 @@ Note that you can include this broadcast on your website, for example in a news 
             		foreach($items as $item){
             		    $html .= '
             		        <tr>
-            		            <td>' . esc_html($item->item_type) . '</td>
+            		            <td>' . ucfirst(esc_html($item->item_type)) . '</td>
             		            <td>' . esc_html(ucfirst(self::datefmt("short", $item->dt))) . '</td>
             		            <td>';
 						if($item->item_type != 'kerktijden'){
@@ -757,22 +757,30 @@ Note that you can include this broadcast on your website, for example in a news 
 						$dt1 = $item_dt->format("Y-m-d 00:00:00");
 						$dt2 = $item_dt->format("Y-m-d 23:59:59");
             		    $events = sermons_nl_event::get_by_dt($dt1, $dt2, true);
-            		    if(empty($events)) $html .= '<em>' . esc_html__('No existing event on this date','sermons-nl') . '</em>';
+						$footnote = false;
+            		    if(empty($events)) $html .= '<li><em>' . esc_html__('No existing event on this date','sermons-nl') . '</em></li>';
             		    else{
-                		    $first = true;
                 		    usort($events, function($d1, $d2){return strtotime($d1->dt) - strtotime($d2->dt);});
                 		    foreach($events as $event){
-                		        if($first) $first = false;
-                		        else $html .= '<br/>';
-                		        $html .= '<li onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($item->item_type).'\', '.esc_attr($item->id).', '.esc_attr($event->id).');">';
-                		        if($event->dt){
+								$can_be_linked = ($event->__get($item->item_type) === NULL);
+                		        $html .= '<li' . ($can_be_linked ? ' class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($item->item_type).'\', '.esc_attr($item->id).', '.esc_attr($event->id).');"' : ' class="nonlinkable"') . '>';
+								if($event->dt){
             		                $html .= esc_html(ucfirst(self::datefmt('short', $event->dt)));
-            		            }
+            		            }else{
+									$html .= esc_html__('No time stamp','sermons-nl');
+								}
+								if(!$can_be_linked){
+									/* Translators: %s will contain the type of an item */
+									$html .= ' *';
+									$footnote = true;
+								}
             		            $html .= '</li>';
             		        }
         		        }
-        	    	    $html .= '<br/><li onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($item->item_type).'\', '.esc_attr($item->id).', null);">' . esc_html__('Create new event','sermons-nl') . '</li>';
-        	    	    $html .= '</ul></div></a>
+        	    	    $html .= '<li class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($item->item_type).'\', '.esc_attr($item->id).', null);">' . esc_html__('Create new event','sermons-nl') . '</li>';
+        	    	    $html .= '</ul>';
+						if($footnote) $html .= '<p class="nonlinkable">* ' . sprintf(esc_html__('Linking not possible, already has %s', 'sermons-nl'), $item->item_type) . '</p>';
+						$html .= '</div></a>
             		                </td>
             		            </tr>'; 
         	    	}

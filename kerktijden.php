@@ -245,11 +245,13 @@ class sermons_nl_kerktijden{
             if(false === $i){
                 // it is new, check for existing events
                 $event = sermons_nl_event::get_by_dt($row['dt']);
-                if(null === $event){
-                   $event = sermons_nl_event::add_record($row['dt']);
+				// create new event if there is no event OR if the event already has a kerktijden record
+				if(null === $event || $event->kerktijden !== NULL){
+                    $event = sermons_nl_event::add_record($row['dt']);
                 }
-                // create a new record
+                // attach kerktijden item to the event
                 $row['event_id'] = $event->id;
+				// create a new kerktijden record
                 self::add_record($row);
             }
             else{

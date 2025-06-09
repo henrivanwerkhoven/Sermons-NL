@@ -331,7 +331,8 @@ class sermons_nl_kerkomroep{
                 $dt1 = (new DateTime($item->dt, sermons_nl::$timezone_db))->sub($DI15m)->format("Y-m-d H:i:s"); // margin for delayed start
                 $dt2 = (new DateTime($item->dt_end, sermons_nl::$timezone_db))->format("Y-m-d H:i:s"); // from the archive, a margin for early start is not needed
                 $event = sermons_nl_event::get_by_dt($dt1, $dt2);
-                if(null === $event){
+                // create a new event if there is no event within this datetime range OR if the event already has a kerkomroep item
+                if(null === $event || $event->kerkomroep !== NULL){
                    $event = sermons_nl_event::add_record($item->dt, $item->dt_end);
                 }else{
                     // dt_min and dt_max of the event may need update
