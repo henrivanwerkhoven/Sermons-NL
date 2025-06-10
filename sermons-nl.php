@@ -16,7 +16,7 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.1.3'; // version to be used for scripts / style sheets
+	const V = '1.1.4'; // version to be used for scripts / style sheets
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
     const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
     const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
@@ -813,7 +813,15 @@ Note that you can include this broadcast on your website, for example in a news 
         		        </p>';
         		    }else{
         		        $abbr = array('kerktijden'=>'kt', 'kerkomroep'=>'ko', 'youtube'=>'yt');
-        		        //  class="wp-list-table widefat fixed striped pages"
+						// find all other events on the same date
+						$event_dt = new DateTime($event->dt, sermons_nl::$timezone_db);
+						$dt1 = $event_dt->format("Y-m-d 00:00:00");
+						$dt2 = $event_dt->format("Y-m-d 23:59:59");
+						$other_events = sermons_nl_event::get_by_dt($dt1, $dt2, true);
+						foreach($other_events as $i => $x){
+							if($x->id == $event->id) unset($other_events[$i]);
+						}
+						//  class="wp-list-table widefat fixed striped pages"
         		        $html .= '
         		        <p><b>' . esc_html__("This event has the following linked items:", "sermons-nl") . '</b></p>
         		        <table>';
@@ -835,7 +843,34 @@ Note that you can include this broadcast on your website, for example in a news 
 								}
 								$html .= '
 									</td>
-									<td><a class="sermons-nl-linktoevent" href="javascript:;" onclick="sermons_nl_admin.unlink_item(\'' . esc_attr($type) . '\', ' . esc_attr($item->id) . ');"><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/link.png"/> ' . esc_html__('Unlink item','sermons-nl') . '</a></td>
+									<td>
+										<a class="sermons-nl-linktoevent"><img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/link.png"/> ' . esc_html__('Link to other event','sermons-nl') . '<div><ul>';
+								$footnote = false;
+								if(empty($other_events)) $html .= '<li><em>' . esc_html__('No other existing events on this date','sermons-nl') . '</em></li>';
+								else{
+									usort($other_events, function($d1, $d2){return strtotime($d1->dt) - strtotime($d2->dt);});
+									foreach($other_events as $other_event){
+										$can_be_linked = ($other_event->__get($type) === NULL);
+										$html .= '<li' . ($can_be_linked ? ' class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($type).'\','.esc_attr($item->id).','.esc_attr($other_event->id).','.esc_attr($event->id).');"' : ' class="nonlinkable"') . '>';
+										if($other_event->dt){
+											$html .= esc_html(ucfirst(self::datefmt('short', $other_event->dt)));
+										}else{
+											$html .= esc_html__('No time stamp','sermons-nl');
+										}
+										if(!$can_be_linked){
+											// Translators: %s will contain the type of an item
+											$html .= ' *';
+											$footnote = true;
+										}
+										$html .= '</li>';
+									}
+								}
+								$html .= '<li class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($type).'\', '.esc_attr($item->id).', null,'.esc_attr($event->id).');">' . esc_html__('Create new event','sermons-nl') . '</li>';
+								$html .= '<li class="linkable" onclick="sermons_nl_admin.unlink_item(\'' . esc_attr($type) . '\', ' . esc_attr($item->id) . ');">' . esc_html__('Unlink item','sermons-nl') . '</li>';
+								$html .= '</ul>';
+								if($footnote) $html .= '<p class="nonlinkable">* ' . sprintf(esc_html__('Linking not possible, already has %s', 'sermons-nl'), $type) . '</p>';
+								$html .= '</div></a>
+									</td>
 								</tr>';
         		            }
         		        }

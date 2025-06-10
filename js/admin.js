@@ -231,7 +231,7 @@ var sermons_nl_admin = {
         }
     },
     
-    link_item_to_event : function(item_type, item_id, event_id){
+    link_item_to_event : function(item_type, item_id, event_id, from_event_id=0){
         this.wait_a_sec(1);
         // get attributes
     	var data = {
@@ -252,11 +252,11 @@ var sermons_nl_admin = {
     		}
     		if(response.ok === true){
     		    // reload current view
-    		    sermons_nl_admin.show_details(0);
+    		    sermons_nl_admin.show_details(from_event_id);
     		    // reload current month view (even though it may not be needed if the changed event if from another month)
     		    sermons_nl_admin.navigate(0);
     		    // update number
-    		    sermons_nl_admin.update_unlinked_num(response.unlinked_num);
+    		    if(from_event_id == 0) sermons_nl_admin.update_unlinked_num(response.unlinked_num);
     		    return true;
     		}
     		console.log("Linking item to event gave error: " + response.errMsg);
