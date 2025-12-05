@@ -217,15 +217,19 @@ class sermons_nl_kerkomroep{
             sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "XML->response expected but received something else.");
             return false;
         }
+        if(empty($obj->response->uitzendingen) || empty($obj->response->uitzendingen->uitzending)){
+            sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "Archive received from Kerkomroep is empty.");
+            return false;
+        }
         $remote_data = $obj->response->uitzendingen->uitzending;
         // if the function argument $check_live_only is true, or if the first remote item is live, or if the
         // first item of the local data is live, we use compare_live_broadcast to handle the first record
-        if($check_live_only || $remote_data[0]->is_live || self::get_live()){
+        if($check_live_only || (int)$remote_data[0]->is_live || self::get_live()){
             $ok = self::compare_live_broadcast($remote_data[0]);
         }
         if(!$check_live_only){
             // exclude the first record if it is live (already handled)
-            if($remote_data[0]->is_live){
+            if((int)$remote_data[0]->is_live){
                 array_shift($remote_data);
             }
             // now compare all remote items to the local items
