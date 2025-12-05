@@ -246,8 +246,8 @@ class sermons_nl_kerkomroep{
                 $item = self::add_record($new_data);
                 // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
                 $event = sermons_nl_event::get_by_dt(
-                    (clone $now)->sub(new DateInterval('PT30M'))->format("Y-m-d H:i:s"),
-                    (clone $now)->add(new DateInterval('PT60M'))->format("Y-m-d H:i:s")
+                    (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s"),
+                    (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s")
                 );
                 if(null === $event){
                     $event = sermons_nl_event::add_record($item->dt, $item->dt_end);
