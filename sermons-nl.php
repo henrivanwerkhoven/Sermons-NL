@@ -1829,7 +1829,7 @@ Note that you can include this broadcasted event on your website, for example in
                 $type = $matches[1][0];
                 $id = $matches[3][0];
 				$item = self::get_item_by_type($type, $id);
-                $items[] = $item;
+                if($item) $items[] = $item;
             }
         }
         $events_client = array();

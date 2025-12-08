@@ -62,6 +62,7 @@ class sermons_nl_kerkomroep{
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $wpdb->delete($wpdb->prefix.'sermons_nl_kerkomroep', array('id' => $this->id));
+        if($this->event_id && isset(self::$items_by_event[$this->event_id])) unset(self::$items_by_event[$this->event_id]);
         unset(self::$items[$this->id]);
     }
 	
@@ -206,7 +207,7 @@ class sermons_nl_kerkomroep{
     }
     */
 
-    public static function get_remote_data($check_live_only=false){
+    public static function get_remote_data($check_first_only=false){
         $mp = get_option("sermons_nl_kerkomroep_mountpoint");
         
         $content= self::post_request("getstreams", array("command" => "getstreams", "target" => "uitzendingen.uitzending", "mountpoint" => $mp, "isArray" => "true"));
@@ -222,22 +223,22 @@ class sermons_nl_kerkomroep{
             return false;
         }
         $remote_data = $obj->response->uitzendingen->uitzending;
-        // if the function argument $check_live_only is true, or if the first remote item is live, or if the
+        // if the function argument $check_first_only is true, or if the first remote item is live, or if the
         // first item of the local data is live, we use compare_live_broadcast to handle the first record
-        if($check_live_only || (int)$remote_data[0]->is_live || self::get_live()){
+        if($check_first_only || (int)$remote_data[0]->is_live || self::get_live()){
             $ok = self::compare_live_broadcast($remote_data[0]);
         }
-        if(!$check_live_only){
-            // exclude the first record if it is live (already handled)
-            if((int)$remote_data[0]->is_live){
-                array_shift($remote_data);
-            }
-            // now compare all remote items to the local items
-            $ok = self::compare_remote_to_local_data($remote_data, true);
+        // exclude the first record if it is live (already handled)
+        if((int)$remote_data[0]->is_live){
+            unset($remote_data[0]);
         }
+        if($check_first_only){
+            $remote_data = array($remote_data[0]);
+        }
+        // now compare all remote items to the local items. 2nd argument: only delete non-existing files if $check_first_only is false
+        $ok = self::compare_remote_to_local_data($remote_data, !$check_first_only);
         return $ok;
     }
-
     
     public static function compare_live_broadcast($remote_item){
         $local_item = self::get_live(); // live item from database
