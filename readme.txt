@@ -112,6 +112,13 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Option to link an item from one event directly to another or new event is added
 * Error in shortcode builder is fixed
 
+= 1.3 =
+* Added feature: Allow to customize the time interval allowed to link items together in one event.
+* Improved language: In particular that "sermons" is replaced by "church service", "broadcast" or "event" as appropriate.
+* Bug fixed: When kerkomroep broadcast is ended and it is already archived, the live broadcast is first deleted from memory before adding the item from the archive, to avoid that a new event is created.
+* Bug fixed: Type-casting of the feature "is_live" to integer resolved an error.
+* Bug fixed: When planned youtube broadcasts are relocated to another event, no error occurs due to the lack of an end date.
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -131,3 +138,6 @@ Audio/video icon color settings
 
 = 1.2 =
 Several small improvements
+
+= 1.3 =
+Small feature, improved language and some bug fixes
