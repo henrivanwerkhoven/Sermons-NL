@@ -62,6 +62,7 @@ class sermons_nl_kerkomroep{
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $wpdb->delete($wpdb->prefix.'sermons_nl_kerkomroep', array('id' => $this->id));
+        if($this->event_id && isset(self::$items_by_event[$this->event_id])) unset(self::$items_by_event[$this->event_id]);
         unset(self::$items[$this->id]);
     }
 	
@@ -115,10 +116,18 @@ class sermons_nl_kerkomroep{
 	public static function get_live(){
 	    global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-        $data = $wpdb->get_results("SELECT id FROM {$wpdb->prefix}sermons_nl_kerkomroep where live=1", ARRAY_A);
+        $data = $wpdb->get_results("SELECT id,dt FROM {$wpdb->prefix}sermons_nl_kerkomroep WHERE live=1 ORDER BY id", ARRAY_A);
 	    if(empty($data)){
 	        return null;
 	    }
+	    // potentially, multiple live items exist. This should not be the case (service doesn't support it) but might happen locally
+	    // if multiple calls to sermons_nl::update_now() are processed at the same time. If it happens, remove more recent items.
+        if(count($data) > 1){
+            for($i=1; $i<count($data); $i++){
+                (self::get_by_id($data[$i]['id']))->delete();
+            }
+        }
+        // return the live event
 	    return self::get_by_id($data[0]['id']);
 	}
 
@@ -198,7 +207,7 @@ class sermons_nl_kerkomroep{
     }
     */
 
-    public static function get_remote_data($check_live_only=false){
+    public static function get_remote_data($check_first_only=false){
         $mp = get_option("sermons_nl_kerkomroep_mountpoint");
         
         $content= self::post_request("getstreams", array("command" => "getstreams", "target" => "uitzendingen.uitzending", "mountpoint" => $mp, "isArray" => "true"));
@@ -209,29 +218,38 @@ class sermons_nl_kerkomroep{
             sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "XML->response expected but received something else.");
             return false;
         }
-        $data = $obj->response->uitzendingen->uitzending;
-        if($check_live_only){
-            return self::compare_live_broadcast($data[0]);
-        }else{
-            // if first remote item is not live but we still have a live broadcast locally, we need to fix that
-            // (it the remote is live, compare_remote_to_local_data will call this function)
-            if(!$data[0]->is_live && self::get_live()) self::compare_live_broadcast($data[0]);
-            // now compare all remote items to the local items
-            return self::compare_remote_to_local_data($data, true);
+        if(empty($obj->response->uitzendingen) || empty($obj->response->uitzendingen->uitzending)){
+            sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "Archive received from Kerkomroep is empty.");
+            return false;
         }
+        $remote_data = $obj->response->uitzendingen->uitzending;
+        // if the function argument $check_first_only is true, or if the first remote item is live, or if the
+        // first item of the local data is live, we use compare_live_broadcast to handle the first record
+        if($check_first_only || (int)$remote_data[0]->is_live || self::get_live()){
+            $ok = self::compare_live_broadcast($remote_data[0]);
+        }
+        // exclude the first record if it is live (already handled)
+        if((int)$remote_data[0]->is_live){
+            unset($remote_data[0]);
+        }
+        if($check_first_only){
+            $remote_data = array($remote_data[0]);
+        }
+        // now compare all remote items to the local items. 2nd argument: only delete non-existing files if $check_first_only is false
+        $ok = self::compare_remote_to_local_data($remote_data, !$check_first_only);
+        return $ok;
     }
-
     
     public static function compare_live_broadcast($remote_item){
-        $item = self::get_live(); // live item from database
+        $local_item = self::get_live(); // live item from database
         if((int)$remote_item->is_live){
             // currently broadcasting
             $now = new DateTime('now', sermons_nl::$timezone_db);
-            if($item !== null){
+            if($local_item !== null){
                 // live broadcast already existing in database, update item
-                $item_dt = new DateTime($item->dt, sermons_nl::$timezone_db);
-                $item->duration = $now->getTimestamp() - $item_dt->getTimestamp(); // seconds
-                if($item->event) $item->event->update_dt_min_max($item->dt, $item->dt_end);
+                $local_item_dt = new DateTime($local_item->dt, sermons_nl::$timezone_db);
+                $local_item->duration = $now->getTimestamp() - $local_item_dt->getTimestamp(); // seconds
+                if($local_item->event) $local_item->event->update_dt_min_max($local_item->dt, $local_item->dt_end);
             }else{
                 // create new live broadcasting item
                 $new_data = array(
@@ -243,30 +261,26 @@ class sermons_nl_kerkomroep{
                     'video_mimetype' => (empty($remote_item->video_mimetype) ? null : (string)$remote_item->video_mimetype), 
                     'live' => 1
                 );
-                $item = self::add_record($new_data);
+                $local_item = self::add_record($new_data);
                 // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
                 $event = sermons_nl_event::get_by_dt(
-                    (clone $now)->sub(new DateInterval('PT30M'))->format("Y-m-d H:i:s"),
-                    (clone $now)->add(new DateInterval('PT60M'))->format("Y-m-d H:i:s")
+                    (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s"),
+                    (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s")
                 );
                 if(null === $event){
-                    $event = sermons_nl_event::add_record($item->dt, $item->dt_end);
+                    $event = sermons_nl_event::add_record($local_item->dt, $local_item->dt_end);
                 }else{
                     // dt_min and dt_max of the event may need update
-                    $event->update_dt_min_max($item->dt, $item->dt_end);
+                    $event->update_dt_min_max($local_item->dt, $local_item->dt_end);
                 }
                 // attach the kerkomroep item to the event
-                $item->update(array('event_id' => $event->id));
+                $local_item->update(array('event_id' => $event->id));
                 sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added.");
             }
-        }else{
-            if($item !== null){
-                // live broadcast is no longer available remotely but still exists locally. Delete it. The broadcast will later be added from the archive.
-                sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted.");
-                $item->delete();
-            }
-            // check if $remote_item already exists; this could be the (yet unsaved) broadcasted item
-            self::compare_remote_to_local_data(array($remote_item), false);
+        }elseif($local_item !== null){
+            // live broadcast is no longer available remotely but still exists locally. Delete it. The broadcast will later be added from the archive.
+            sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted.");
+            $local_item->delete();
         }
     }
     
@@ -280,7 +294,8 @@ class sermons_nl_kerkomroep{
 	    $DI15m = new DateInterval("PT15M");
         foreach($remote_data as $remote_item){
             if((int)$remote_item->is_live){
-                self:: compare_live_broadcast($remote_item);
+                // this should not happen, but if other than the first record are live broadcasting, I want to handle it via this function.
+                self::compare_live_broadcast($remote_item);
                 continue;
             }
             $dt = new DateTime($remote_item->datum . ' ' . $remote_item->tijd, sermons_nl::$timezone_ko);
@@ -361,11 +376,13 @@ class sermons_nl_kerkomroep{
             $not_found = array_diff(array_keys($local_data), $found_items);
             foreach($not_found as $i){
                 $item = $local_data[$i];
-                if(!$item->validate_remote_urls()){
-                    sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} no longer exists; item deleted.");
-                    $item->delete();
-                }else{
-                    sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} not in archive but url is valid; item retained.");
+                if(!$item->is_live){
+                    if(!$item->validate_remote_urls()){
+                        sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} no longer exists; item deleted.");
+                        $item->delete();
+                    }else{
+                        sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} not in archive but url is valid; item retained.");
+                    }
                 }
             }
         }

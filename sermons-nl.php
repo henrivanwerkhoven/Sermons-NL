@@ -2,8 +2,8 @@
 /*
 	Plugin Name: Sermons-NL
 	Plugin URI: https://wordpress.org/plugins/sermons-nl/
-	Description: List planned and broadcasted Dutch church services in a convenient way
-	Version: 1.2
+	Description: List planned and broadcasted Dutch church services or other events in a convenient way
+	Version: 1.3
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
 	License: GPL2
@@ -16,9 +16,10 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.2'; // version to be used for scripts / style sheets
+	const V = '1.3'; // version to be used for scripts / style sheets
+	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
+
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
-    const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
     const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
 
     // SETTINGS
@@ -35,9 +36,12 @@ class sermons_nl{
         "sermons_nl_kerktijden_weeksback"           => array('type' => 'integer', 'default' => 52),
         "sermons_nl_kerktijden_weeksahead"          => array('type' => 'integer', 'default' => 52),
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
+		"sermons_nl_kerkomroep_min_ahead"           => array('type' => 'integer', 'default' => 60),
+		"sermons_nl_kerkomroep_min_delay"			=> array('type' => 'integer', 'default' => 60),
         "sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
+		"sermons_nl_youtube_min_ahead"				=> array('type' => 'integer', 'default' => 60),
         "sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
         "sermons_nl_icon_color_archive"             => array('type' => 'string',  'default' => '#000000'),
         "sermons_nl_icon_color_planned"             => array('type' => 'string',  'default' => '#8c8c8c'),
@@ -48,9 +52,8 @@ class sermons_nl{
 		foreach(self::OPTION_NAMES as $optname => $args){
 			register_setting('sermons_nl_options_group', $optname, $args);
 		}
-		// add dummy translations for the header
-		$dummy_plugin_name = __("Sermons-NL", "sermons-nl");
-		$dummy_description = __("List planned and broadcasted Dutch church services in a convenient way", "sermons-nl");
+		// add dummy translation for the description
+		$dummy_description = __("List planned and broadcasted Dutch church services or other events in a convenient way", "sermons-nl");
 	}
 	
 	// access rights
@@ -333,7 +336,7 @@ class sermons_nl{
     public static function add_admin_menu(){
         $num_issues = count(self::get_events_with_issues());
         $tag_issue = ($num_issues ? ' <span class="awaiting-mod">'.$num_issues.'</span>' : '');
-        add_menu_page(__('Sermons-NL plugin', 'sermons-nl'), __('Sermons-NL','sermons-nl') . $tag_issue, self::$capability, 'sermons-nl', array('sermons_nl','admin_overview_page'), 'dashicons-admin-media', 7);
+        add_menu_page(__('Sermons-NL plugin', 'sermons-nl'), 'Sermons-NL'.$tag_issue, self::$capability, 'sermons-nl', array('sermons_nl','admin_overview_page'), 'dashicons-admin-media', 7);
         add_submenu_page('sermons-nl', __('Sermons-NL administration','sermons-nl'), __('Administration','sermons-nl'), self::$capability, 'sermons-nl-admin', array('sermons_nl','admin_administration_page'));
 	    add_submenu_page('sermons-nl', __('Sermons-NL configuration','sermons-nl'), __('Configuration','sermons-nl'), self::$capability, 'sermons-nl-config', array('sermons_nl','admin_edit_config_page'));
 	    add_submenu_page('sermons-nl', __('Sermons-NL log','sermons-nl'), __('Log','sermons-nl'), self::$capability, 'sermons-nl-log', array('sermons_nl','admin_view_log_page'));
@@ -371,8 +374,8 @@ class sermons_nl{
 
 		print '
 		<div class="sermons-nl-overview">
-		    <h2>
-		        ' . esc_html__("Sermons-NL overview page","sermons-nl") . '
+		    <h2>Sermons-NL |
+		        ' . esc_html__("overview page","sermons-nl") . '
 	            <img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/waiting.gif" id="sermons_nl_waiting"/><!-- icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ -->
     	    </h2>
 		    <div class="sermons-nl-container">
@@ -380,8 +383,8 @@ class sermons_nl{
 		        <div>
 		            <p>' . 
                     sprintf(
-						/* translators: %d is replaced by the number of sermons/events. */
-						esc_html__('Your site includes a total of %d sermons.','sermons-nl'), count($events)
+						/* translators: %d is replaced by the number of services (events). */
+						esc_html__('Your site includes a total of %d (planned) broadcasts.','sermons-nl'), count($events)
 					) .
                     ' ' .
                     sprintf(
@@ -465,7 +468,7 @@ class sermons_nl{
         print '
                 <h3>' . esc_html__("Shortcode builder","sermons-nl") . ':</h3>
                 <div>
-                    <p>' . esc_html__("Build a shortcode to insert the list of sermons to your page.","sermons-nl") . '</p>
+                    <p>' . esc_html__("Build a shortcode to insert the list of (planned) broadcasts to your page.","sermons-nl") . '</p>
                     <p>
                         <a class="sermons-nl-copyshort" onclick="sermons_nl_admin.copy_shortcode(this);" title="' . esc_html__('Click to copy the shortcode','sermons-nl') . '">
         		            <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/copy.png">
@@ -515,7 +518,7 @@ class sermons_nl{
 					'<br/>
 						<sup>2</sup> ' .
 					/* Translators: Url to the Datetime::format() manpage of php.net. */
-					sprintf(esc_html__('The date format, that is used for printing the sermon dates can be either "long" or "short" (which will print a long or short date format followed by hours and minutes) or a suitable date-time format, see %s.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank">DateTime::format()</a>') .
+					sprintf(esc_html__('The date format, that is used for printing the (planned) broadcast dates can be either "long" or "short" (which will print a long or short date format followed by hours and minutes) or a suitable date-time format, see %s.', 'sermons-nl'), '<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank">DateTime::format()</a>') .
 					'<br/>
 						<sup>3</sup>' .
 					esc_html__('The Sermons-NL logo will be displayed next to the obligatory logos of the services that are used. Thank you if you switch this on, it will help others find the plugin!', 'sermons-nl') .
@@ -530,30 +533,30 @@ class sermons_nl{
 			esc_html__("How do I start using the plugin?","sermons-nl") =>
 			esc_html__("After installing and activating the plugin, a page \"Sermons-NL\" is added to the main menu of your WP Admin. In the submenu \"Configuration\" you can enter the details of the services that you want to include. Specific instructions per service are provided there.","sermons-nl"),
 
-			esc_html__("How do I add a list of sermons to my website?","sermons-nl") =>
-			esc_html__("The plugin Sermons-NL uses shortcodes to add sermons to your website. For a complete list of sermons, you will find a shortcode builder on the landing page of the plugin, accessible via the main menu of the WP Admin. You can also add individual sermons or even separate broadcasts to your website. For this, navigate to the Administration submenu, find the relevant sermon or item, and click the copy icon for the shortcode. You can paste the shortcode on your page or in your message.","sermons-nl"),
+			esc_html__("How do I add a list of (planned) broadcasts to my website?","sermons-nl") =>
+			esc_html__("The plugin Sermons-NL uses shortcodes to add (planned) broadcasts to your website. For a list of (planned) broadcasts, you will find a shortcode builder on the landing page of the plugin, via the main menu of the WP Admin. You can also add individual events or even a single broadcast to your website. To this end, navigate to the Administration submenu, find the relevant church service or item, and click the copy icon for the given shortcode. You can paste the shortcode on a page or in a message.","sermons-nl"),
 
-			esc_html__("We have broadcasted an event, but I don't want it to be listed under the sermons","sermons-nl") =>
-			esc_html__("You can do so by finding the event in the Administration submenu, and unticking the \"Include in sermons list\" option. Don't forget to press the Save button.
-If you want to prevent a planned broadcast to be listed under the sermons, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the  date and time of the planned broadcast. Untick the \"Inclde in sermons list\" option. Note that the \"Protect from automated deletion\" option should be on, especially if you create the manual event entry before the day of the broadcast, or else you will loose it overnight. As soon as the new broadcast is detected, the plugin will link it to this manual event and will avoid the creation of a new one.
-Note that you can include this broadcast on your website, for example in a news message, by using the event shortcode that you find in the Administration page.","sermons-nl"),
+			esc_html__("We have broadcasted an event that I don't want to include in the list of (planned) broadcasts. How do I do that?","sermons-nl") =>
+			esc_html__("You can do so by finding the event in the Administration submenu, and unticking the \"Include in (planned) broadcasts list\" option. Don't forget to press the Save button.
+If you want to prevent a future broadcasted event to be included in the (planned) broadcasts list, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the appropriate date and time of the planned event. Untick the \"Include in (planned) broadcasts list\" option. Note that the \"Protect from automated deletion\" option should be ticked if you create the manual event entry before the day of the broadcasted event, otherwise it will be deleted overnight. As soon as the new broadcast is detected, the plugin will link it to this manual event, which will avoid inclusion in the (planned) broadcasts list.
+Note that you can include this broadcasted event on your website, for example in a news message, by using the shortcode for events that you find in the Administration page.","sermons-nl"),
 
 			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?","sermons-nl") =>
-			esc_html__("This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned sermon is not unambiguous. It is easy to fix afterwards. Go to the Administration submenu and find the sermon that has this error. You can first unlink the item that was not correctly linked. It will end up under the \"Unlinked items\". If the sermons has no other linked items, you can now delete it. Next, go to the unlinked items and link it to another sermon. Only sermons with the same date can be linked.","sermons-nl"),
+			esc_html__("This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned event is not unambiguous, or if multiple broadcasts of the same type are detected, for example if the broadcast service has been interrupted. It is easy to fix afterwards. Go to the Administration submenu and find the event  that has this error. You can unlink the item that was not correctly linked (it will end up under the \"Unlinked items\") or directly link it to another event. If the event has no other linked items, you can now delete it. Go to the unlinked items if you want to link them to another event. Only items with the same date can be linked.","sermons-nl"),
 
 			esc_html__("Why does Sermons-NL not support Kerkdienst Gemist?","sermons-nl") =>
-			esc_html__("Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep is included, because the church for which the plugin was first developed uses that service. However, adding support for Kerkdienst Gemist is possible, I would really like to add it in one of the next releases. I welcome volunteers to test this functionality in a beta version if their church is using Kerkdienst Gemist and if they would love to use this plugin. For this, please visit the issue page and add your reaction or send an e-mail to the developer.","sermons-nl"),
+			esc_html__("Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep is included, because the church for which the plugin was first developed uses that service. However, adding support for Kerkdienst Gemist is possible if a church using Kerkdienst Gemist is willing to assist in testing and debugging. In that case, please visit the issue page and add your reaction or send an e-mail to the developer.","sermons-nl"),
 
 			esc_html__("Wordpress is occasionally responding very slow since I am using Sermons-NL. What can I do about it?","sermons-nl") =>
 			sprintf(
 				/* Translators: Opening and closing tags of url to instruction page. */
-				esc_html__('Please check if you are using cron jobs. Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs.  The recommended frequency of cron jobs for this Plugin is once every 15 minutes. Please check for example %1$s this instruction to disable cron in wordpress %2$s for instruction. If you are already using cron jobs and it is correctly configured, it is unlikely that the Sermons-NL plugin is slowing down your website.','sermons-nl'),
+				esc_html__('Please check if you are using cron jobs. Sermons-NL will regularly update data in the background. This can slow down your website. To optimize performance, check if your hosting server allows you to use cron jobs.  The recommended frequency of cron jobs for this Plugin is once every 15 minutes. Please check for example %1$s this instruction to disable cron in wordpress %2$s. If you are already using cron jobs and it is correctly configured, it is unlikely that the Sermons-NL plugin is slowing down your website.','sermons-nl'),
 				'<a href="https://www.wpbeginner.com/wp-tutorials/how-to-disable-wp-cron-in-wordpress-and-set-up-proper-cron-jobs" target="_blank">',
 				'</a>'
 			),
 
 			esc_html__("I get [Sermons-NL invalid shortcode] on my site where a Sermons-NL shortcode was used","sermons-nl") =>
-			esc_html__("Shortcodes for standalone items may produce the error [invalid shortcode] for two reasons. If the error mentions (duplication), this means that you have multiple standalone items on the page, one of them is a duplication. The plugin doesn't allow you to include a standalone sermon and also a standalone item from the same sermon on one page as this will cause conflicts. A second possible explanation is that the standalone sermon or item that you have included does not exist (any more). Check the Administration submenu in your WP Admin for the correct shortcode.","sermons-nl"),
+			esc_html__("Shortcodes for standalone items may produce the error [invalid shortcode] for two reasons. If the error mentions (duplication), this means that you have multiple standalone items on the page, one of them is a duplication. The plugin doesn't allow you to include the same item or event twice on the same page as this will cause conflicts. A second possible explanation is that the standalone event or item that you have included does not exist (any more). Check the Administration submenu in your WP Admin for the correct shortcode.","sermons-nl"),
 
 			esc_html__("I encounter another problem with my plugin, what can I do to fix it?","sermons-nl") =>
 			esc_html__("Please visit the Log submenu in your WP Admin first to see if you can identify the reason for your problem. Check the settings if the Log indicates errors when obtaining data. If you are not able to fix the problem, please report it on the issue page of the plugin or e-mail to the developer while including as much detail as possible.","sermons-nl")
@@ -587,7 +590,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		$num_unlinked = self::num_unlinked_items();
 		print '
 		<div>
-		    <h2>' . esc_html__("Manage church service calendar and broadcasts","sermons-nl") . '</h2>
+		    <h2>Sermons-NL | ' . esc_html__("manage (planned) broadcasts of church services and other events","sermons-nl") . '</h2>
 		    <p class="sermons-nl-abuttons">
 		        <a href="javascript:;" onclick="sermons_nl_admin.navigate(-1);">' . esc_html__('Previous month','sermons-nl') . '</a>
 		        <a href="javascript:;" onclick="sermons_nl_admin.navigate(1);">' . esc_html__('Next month','sermons-nl') . '</a>
@@ -713,7 +716,7 @@ Note that you can include this broadcast on your website, for example in a news 
     		    $items = self::get_unlinked_items();
     		    $html .= esc_html__("Unlinked items","sermons-nl") . '</h3>
         		    <ul>
-        		        <li>' . esc_html__('Items not linked to an event will not be shown in the sermons listing.','sermons-nl').'</li>
+        		        <li>' . esc_html__('Items not linked to an event will not be shown in the (planned) broadcasts list.','sermons-nl').'</li>
             		    <li>' . esc_html__('Link the item to an existing event by clicking the date or create a new one.','sermons-nl').'</li>
             		    <li>' . esc_html__('For new events, the date and time of the linked item is used.','sermons-nl').'</li>
         		        <li>' . esc_html__('Or copy the shortcode for adding the single item to your website.','sermons-nl').'</li>
@@ -929,7 +932,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		$html .= '/></td>
 				</tr>
 				<tr>
-					<td>' . esc_html__('Select sermon type from','sermons-nl') . ': <sup>2</sup></td>
+					<td>' . esc_html__('Select church service type from','sermons-nl') . ': <sup>2</sup></td>
 					<td><select name="sermontype_from" onchange="sermons_nl_admin.toggle_manual_row(this,\'sermontype\');">';
 		foreach(array('auto','manual','kerktijden') as $value){
 			$html .= '<option value="'.esc_attr($value).'"' . ($value == $event->sermontype_from ? ' selected="selected"' : '') . '>' . esc_html($options_str[$value]) . '</option>';
@@ -966,7 +969,7 @@ Note that you can include this broadcast on your website, for example in a news 
 				</tr>
 				<tr>
 					<td>' . esc_html__('Other settings','sermons-nl') . ':</td>
-					<td><input type="checkbox" name="include" id="sermons_nl_include"' . ($event->include ? ' checked' : '') . '/><label for="sermons_nl_include"> ' . esc_html__('Include in sermons list','sermons-nl') . ' <sup>5</sup></label></td>
+					<td><input type="checkbox" name="include" id="sermons_nl_include"' . ($event->include ? ' checked' : '') . '/><label for="sermons_nl_include"> ' . esc_html__('Include in (planned) broadcasts list','sermons-nl') . ' <sup>5</sup></label></td>
 				</tr>
 				<tr>
 					<td></td>
@@ -982,7 +985,7 @@ Note that you can include this broadcast on your website, for example in a news 
 				esc_html__('If auto is selected or if an item is selected that has no date-time, the order of picking the date-time is (based on availability): kerktijden, youtube (if it has a planned date), kerkomroep, youtube (if it has been broadcasted).','sermons-nl') .
 				'<br/>
 				<sup>2.</sup> ' .
-				esc_html__('If auto is selected, sermons type will be selected from kerktijden.','sermons-nl') .
+				esc_html__('If auto is selected, church service type will be selected from kerktijden.','sermons-nl') .
 				'<br/>
 				<sup>3.</sup> ' .
 				esc_html__('If auto is selected, pastor name will be selected from kerktijden or kerkomroep (in this order based on availability).','sermons-nl')  .
@@ -991,7 +994,7 @@ Note that you can include this broadcast on your website, for example in a news 
 				esc_html__('If auto is selected, description will be selected from youtube or kerkomroep (in this order, based on availability).','sermons-nl') .
 				'<br/>
 				<sup>5.</sup> ' .
-				esc_html__('If this option is checked, the event will be included when displaying sermons on the website using the sermons-nl-list shortcode.','sermons-nl') .
+				esc_html__('If this option is checked, the event will be included when displaying the (planned) broadcasts list on the website using the sermons-nl-list shortcode.','sermons-nl') .
 				'<br/>
 				<sup>6.</sup> ' .
 				esc_html__('Events that have no linked items are deleted over night. Tick this box to prevent that from happening.','sermons-nl') . '
@@ -1208,9 +1211,12 @@ Note that you can include this broadcast on your website, for example in a news 
 		$kt_weeksback = get_option('sermons_nl_kerktijden_weeksback');
 		$kt_weeksahead = get_option('sermons_nl_kerktijden_weeksahead');
         $ko_mp = get_option('sermons_nl_kerkomroep_mountpoint');
+		$ko_min_ahead = get_option('sermons_nl_kerkomroep_min_ahead');
+		$ko_min_delay = get_option('sermons_nl_kerkomroep_min_delay');
         $yt_channel = get_option('sermons_nl_youtube_channel');
 		$yt_key = get_option('sermons_nl_youtube_key');
 		$yt_weeksback = get_option('sermons_nl_youtube_weeksback');
+		$yt_min_ahead = get_option('sermons_nl_youtube_min_ahead');
 		$color_archive = get_option('sermons_nl_icon_color_archive');
 		$color_planned = get_option('sermons_nl_icon_color_planned');
 		$color_live = get_option('sermons_nl_icon_color_live');
@@ -1218,7 +1224,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		// return settings form
 		print '
 		<div class="sermons-nl-settings">
-			<h2>' . esc_html__("Settings for church services", 'sermons-nl') .
+			<h2>Sermons-NL | ' . esc_html__("settings", 'sermons-nl') .
 				/* icon freely available at https://icons8.com/preloaders/en/circular/floating-rays/ */
 				' <img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/waiting.gif" id="sermons_nl_waiting"/></h2>
 			<div id="sermons_nl_config_save_msg"></div>';
@@ -1310,6 +1316,22 @@ Note that you can include this broadcast on your website, for example in a news 
 							</td>
 							<td><input type="text" name="sermons_nl_kerkomroep_mountpoint" id="input_kerkomroep_id" value="' . ($ko_mp ? esc_attr($ko_mp) : '') . '"/></td>
 						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html__("Linkage margin ahead (minutes)","sermons-nl") . ':
+								<div class="help"><div>'.
+									esc_html__("When the broadcast is started prior to the start time of a planned event, what is the maximum interval in minutes to automatically link it to this event?", "sermons-nl") .
+								'<div></div>
+							</td>
+							<td><input type="text" name="sermons_nl_kerkomroep_min_ahead" value="' . ($ko_min_ahead ? esc_attr($ko_min_ahead) : '') .'"/></td>
+						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html__("Linkage margin delay (minutes)","sermons-nl") . ':
+								<div class="help"><div>'.
+									esc_html__("When the broadcast is started (or detected) after the start time of a planned event, what is the maximum delay interval in minutes to automatically link it to this event?", "sermons-nl") .
+								'<div></div>
+							</td>
+							<td><input type="text" name="sermons_nl_kerkomroep_min_delay" value="' . ($ko_min_delay ? esc_attr($ko_min_delay) : '') .'"/></td>
+						</tr>
 					</tbody>
                     <tbody id="youtube_settings"' . ($yt_channel ? '' : ' class="settings-disabled"') . '>
 						<tr>
@@ -1348,6 +1370,14 @@ Note that you can include this broadcast on your website, for example in a news 
 								sprintf(esc_html__("How many weeks to look back when loading the %s archive","sermons-nl"), "YouTube") . '</div></div>
 							</td>
 							<td><input type="text" name="sermons_nl_youtube_weeksback" value="'. ($yt_weeksback ? esc_attr($yt_weeksback) : '') . '""/></td>
+						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html__("Linkage margin ahead (minutes)","sermons-nl") . ':
+								<div class="help"><div>'.
+									esc_html__("When the broadcast is started prior to the start time of a planned event, what is the maximum interval in minutes to automatically link it to this event?", "sermons-nl") .
+								'<div></div>
+							</td>
+							<td><input type="text" name="sermons_nl_youtube_min_ahead" value="' . ($yt_min_ahead ? esc_attr($yt_min_ahead) : '') .'"/></td>
 						</tr>
 					</tbody>
 				</table>';
@@ -1468,7 +1498,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		global $wpdb;
 
 		print '<div>
-        <h2>'.esc_html__('Sermons-NL','sermons-nl').' '.esc_html__('Log page','sermons-nl').'</h2>
+        <h2>Sermons-NL | '.esc_html__('log page','sermons-nl').'</h2>
         <p>' .
         /* Translators: Number of log retention days. */
         sprintf(esc_html__('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions from the past %d days.','sermons-nl'), esc_html(self::LOG_RETENTION_DAYS)) . '</p>';
@@ -1489,7 +1519,7 @@ Note that you can include this broadcast on your website, for example in a news 
 	
     // UPDATE FUNCTIONS HANDLED BY CRON JOBS
     
-    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old sermons if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
+    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old events if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
     public static function update_daily(){
         // kerktijden: update the archive
         if(get_option('sermons_nl_kerktijden_id')){
@@ -1547,7 +1577,7 @@ Note that you can include this broadcast on your website, for example in a news 
     
     // UPDATE FUNCTION CALLED BY THE SITE FUNCTIONS
     
-    // only checks for live broadcasts. in case of youtube it only does so when a sermon is close to start
+    // only checks for live broadcasts. in case of youtube it only does so when a broadcast is close to start
     private static function update_now(){
         $last_update_now_time = get_option("sermons_nl_last_update_time", 0);
 		// first check if the last check was >60 seconds ago. to avoid running out of quota for the youtube api.
@@ -1560,7 +1590,7 @@ Note that you can include this broadcast on your website, for example in a news 
                 sermons_nl_kerkomroep::get_remote_data(true);
             }
             if(get_option('sermons_nl_youtube_channel')){
-                // check if any sermon is close to start (30 min), or that 
+                // check if any broadcast is close to start (30 min), or that
                 // should have started, and is not broadcasting yet, or that is
                 // live. include overnight broadcasts: check yesterday and today
                 $data = self::get_complete_records_by_dates(gmdate("Y-m-d", strtotime("now -1 day")), gmdate("Y-m-d"), true);
@@ -1586,7 +1616,7 @@ Note that you can include this broadcast on your website, for example in a news 
     // SITE FUNCTIONS
     
 
-    // shortcode function to list sermons
+    // shortcode function to list (planned) broadcasts
     public static function html_sermons_list(array $atts=[], ?string $content=null){
         // default attributes
 		$atts = shortcode_atts( array(
@@ -1666,7 +1696,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		<div>';
 		
 		if($morebuttons){ 
-		    // check if there are earlier sermons
+		    // check if there are earlier events
 		    $showit = false;
 		    if($dt1 === null){
 		        // can rely on $data being longer than -$count ($count is negative)
@@ -1677,7 +1707,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		        if($num_rec) $showit = true;
 		    }
 		    if($showit){
-    			$html .= '<div><a href="javascript:;" id="sermons_nl_more_up" onclick="sermons_nl.showmore(\'up\');">' . esc_html__("Load earlier sermons", 'sermons-nl') . '</a></div>';
+    			$html .= '<div><a href="javascript:;" id="sermons_nl_more_up" onclick="sermons_nl.showmore(\'up\');">&lt;&lt; ' . esc_html__("Load more", 'sermons-nl') . '</a></div>';
 		    }
 		}
 
@@ -1688,7 +1718,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		$html .= '</ul>';
 
 		if($morebuttons){ 
-		    // check if there are later sermons
+		    // check if there are later events
 		    $showit = false;
 		    if($dt2 === null){
 		        // can rely on $data being longer than $count
@@ -1701,7 +1731,7 @@ Note that you can include this broadcast on your website, for example in a news 
 		    if($showit){
     			$html .= '
     			<div>
-					<a href="javascript:;" id="sermons_nl_more_down" onclick="sermons_nl.showmore(\'down\');">' . esc_html__("Load later sermons", 'sermons-nl') . '</a>
+					<a href="javascript:;" id="sermons_nl_more_down" onclick="sermons_nl.showmore(\'down\');">' . esc_html__("Load more", 'sermons-nl') . ' &gt;&gt;</a>
 				</div>';
 		    }
 		}
@@ -1799,7 +1829,7 @@ Note that you can include this broadcast on your website, for example in a news 
                 $type = $matches[1][0];
                 $id = $matches[3][0];
 				$item = self::get_item_by_type($type, $id);
-                $items[] = $item;
+                if($item) $items[] = $item;
             }
         }
         $events_client = array();
@@ -1988,7 +2018,7 @@ Note that you can include this broadcast on your website, for example in a news 
 			}
 			$html .= '<div id="sermons_nl_event_'.esc_attr($event->id).($standalone?'_lone':'').'_links" class="sermons-nl-links">';
 			if(!($event->yt_video_id || $event->ko_id)){
-				$html .= ($event->kt_cancelled ? esc_html__('This sermon has been cancelled.','sermons-nl') : esc_html__('There are no broadcasts for this sermon.','sermons-nl'));
+				$html .= ($event->kt_cancelled ? esc_html__('The church service has been cancelled.','sermons-nl') : esc_html__('There are no broadcasts yet.','sermons-nl'));
 			}
 			else{
 				$html .= self::html_event_links($event, $standalone);
@@ -2269,7 +2299,7 @@ Note that you can include this broadcast on your website, for example in a news 
         $sql = sermons_nl_event::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
         
-        // create tables for kerktijden scheduled sermons and pastors
+        // create tables for kerktijden scheduled church services and pastors
         $sql = sermons_nl_kerktijden::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
         $sql = sermons_nl_kerktijdenpastors::query_create_table($prefix, $charset_collate);

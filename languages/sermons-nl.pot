@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: SermonsNL plugin v0.1\n"
 "Report-Msgid-Bugs-To: Henri van Werkhoven <henrivanwerkhoven2@gmail.com>\n"
-"POT-Creation-Date: 2025-06-10 19:56+0200\n"
+"POT-Creation-Date: 2025-12-05 17:04+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Henri van Werkhoven <henrivanwerkhoven2@gmail.com>\n"
@@ -24,63 +24,61 @@ msgstr ""
 "X-Generator: Poedit 3.4.2\n"
 "X-Poedit-SearchPath-0: .\n"
 
-#: sermons-nl.php:52 sermons-nl.php:336 sermons-nl.php:1471
-msgid "Sermons-NL"
+#: sermons-nl.php:56
+msgid ""
+"List planned and broadcasted Dutch church services or other events in a "
+"convenient way"
 msgstr ""
 
-#: sermons-nl.php:53
-msgid "List planned and broadcasted Dutch church services in a convenient way"
-msgstr ""
-
-#: sermons-nl.php:336
+#: sermons-nl.php:339
 msgid "Sermons-NL plugin"
 msgstr ""
 
-#: sermons-nl.php:337
+#: sermons-nl.php:340
 msgid "Sermons-NL administration"
 msgstr ""
 
-#: sermons-nl.php:337
+#: sermons-nl.php:340
 msgid "Administration"
 msgstr ""
 
-#: sermons-nl.php:338
+#: sermons-nl.php:341
 msgid "Sermons-NL configuration"
 msgstr ""
 
-#: sermons-nl.php:338
+#: sermons-nl.php:341
 msgid "Configuration"
 msgstr ""
 
-#: sermons-nl.php:339
+#: sermons-nl.php:342
 msgid "Sermons-NL log"
 msgstr ""
 
-#: sermons-nl.php:339
+#: sermons-nl.php:342
 msgid "Log"
 msgstr ""
 
-#: sermons-nl.php:375
-msgid "Sermons-NL overview page"
+#: sermons-nl.php:378
+msgid "overview page"
 msgstr ""
 
-#: sermons-nl.php:379
+#: sermons-nl.php:382
 msgid "Status"
 msgstr ""
 
-#: sermons-nl.php:384
+#: sermons-nl.php:387
 #, php-format
-msgid "Your site includes a total of %d sermons."
+msgid "Your site includes a total of %d (planned) broadcasts."
 msgstr ""
 
-#: sermons-nl.php:389
+#: sermons-nl.php:392
 #, php-format
 msgid ""
 "These are based on %1$d entries from Kerktijden, %2$d from Kerkomroep, and "
 "%3$d from Youtube."
 msgstr ""
 
-#: sermons-nl.php:398
+#: sermons-nl.php:401
 #, php-format
 msgid ""
 "%1$sNote: It is recommended to disable WordPress cron.%2$s Sermons-NL will "
@@ -90,134 +88,135 @@ msgid ""
 "Please refer to this instruction. %4$s"
 msgstr ""
 
-#: sermons-nl.php:409
+#: sermons-nl.php:412
 msgid ""
 "%1$sNote: the last check for updates is %$2d hours ago. It seems that the "
 "cron job is not correctly configured.%3$s %4$sPlease refer to this "
 "instruction. %5$s"
 msgstr ""
 
-#: sermons-nl.php:416
+#: sermons-nl.php:419
 #, php-format
 msgid "There are %d issues that require your attention."
 msgstr ""
 
-#: sermons-nl.php:419
+#: sermons-nl.php:422
 msgid "There are currently no issues to resolve."
 msgstr ""
 
-#: sermons-nl.php:428
+#: sermons-nl.php:431
 #, php-format
 msgid "Resolve %d issues"
 msgstr ""
 
-#: sermons-nl.php:431
+#: sermons-nl.php:434
 msgid ""
 "These events have more than one items of the same type. Open the event to "
 "unlink one of the items. You can find the unlinked items in the "
 "administration tab if you want to create a new event from this item."
 msgstr ""
 
-#: sermons-nl.php:437 sermons-nl.php:731
+#: sermons-nl.php:440 sermons-nl.php:734
 msgid "Date / time"
 msgstr ""
 
-#: sermons-nl.php:440 sermons-nl.php:443 sermons-nl.php:446
+#: sermons-nl.php:443 sermons-nl.php:446 sermons-nl.php:449
 #, php-format
 msgid "Number of %s items"
 msgstr ""
 
-#: sermons-nl.php:466
+#: sermons-nl.php:469
 msgid "Shortcode builder"
 msgstr ""
 
-#: sermons-nl.php:468
-msgid "Build a shortcode to insert the list of sermons to your page."
+#: sermons-nl.php:471
+msgid ""
+"Build a shortcode to insert the list of (planned) broadcasts to your page."
 msgstr ""
 
-#: sermons-nl.php:470 sermons-nl.php:744 sermons-nl.php:799 sermons-nl.php:836
+#: sermons-nl.php:473 sermons-nl.php:747 sermons-nl.php:802 sermons-nl.php:839
 msgid "Click to copy the shortcode"
 msgstr ""
 
-#: sermons-nl.php:477
+#: sermons-nl.php:480
 msgid "Selection method"
 msgstr ""
 
-#: sermons-nl.php:480
+#: sermons-nl.php:483
 msgid "Start and end date"
 msgstr ""
 
-#: sermons-nl.php:481
+#: sermons-nl.php:484
 msgid "Fixed number from start date"
 msgstr ""
 
-#: sermons-nl.php:482
+#: sermons-nl.php:485
 msgid "Fixed number back from end date"
 msgstr ""
 
-#: sermons-nl.php:487
+#: sermons-nl.php:490
 msgid "Start date"
 msgstr ""
 
-#: sermons-nl.php:491
+#: sermons-nl.php:494
 msgid "End date"
 msgstr ""
 
-#: sermons-nl.php:495
+#: sermons-nl.php:498
 msgid "Number of events"
 msgstr ""
 
-#: sermons-nl.php:499
+#: sermons-nl.php:502
 msgid "Date format"
 msgstr ""
 
-#: sermons-nl.php:503
+#: sermons-nl.php:506
 msgid "Buttons"
 msgstr ""
 
-#: sermons-nl.php:504
+#: sermons-nl.php:507
 msgid "Include buttons to load earlier and later sermons"
 msgstr ""
 
-#: sermons-nl.php:507 sermons-nl.php:1769
+#: sermons-nl.php:510 sermons-nl.php:1799
 msgid "Sermons-NL logo"
 msgstr ""
 
-#: sermons-nl.php:508
+#: sermons-nl.php:511
 msgid "Display the Sermons-NL logo next to obligatory logos."
 msgstr ""
 
-#: sermons-nl.php:514
+#: sermons-nl.php:517
 #, php-format
 msgid ""
 "For start and end date, you can enter any text that can be interpreted as a "
 "date based on supported %s formats."
 msgstr ""
 
-#: sermons-nl.php:518
+#: sermons-nl.php:521
 #, php-format
 msgid ""
-"The date format, that is used for printing the sermon dates can be either "
-"\"long\" or \"short\" (which will print a long or short date format followed "
-"by hours and minutes) or a suitable date-time format, see %s."
+"The date format, that is used for printing the (planned) broadcast dates can "
+"be either \"long\" or \"short\" (which will print a long or short date "
+"format followed by hours and minutes) or a suitable date-time format, see %s."
 msgstr ""
 
-#: sermons-nl.php:521
+#: sermons-nl.php:524
 msgid ""
 "The Sermons-NL logo will be displayed next to the obligatory logos of the "
 "services that are used. Thank you if you switch this on, it will help others "
 "find the plugin!"
 msgstr ""
 
-#: sermons-nl.php:526
+#: sermons-nl.php:529
 msgid "Frequently asked questions"
 msgstr ""
 
-#: sermons-nl.php:530
+#: sermons-nl.php:533
 msgid "How do I start using the plugin?"
 msgstr ""
 
-#: sermons-nl.php:531
+#: sermons-nl.php:534
 msgid ""
 "After installing and activating the plugin, a page \"Sermons-NL\" is added "
 "to the main menu of your WP Admin. In the submenu \"Configuration\" you can "
@@ -225,86 +224,87 @@ msgid ""
 "instructions per service are provided there."
 msgstr ""
 
-#: sermons-nl.php:533
-msgid "How do I add a list of sermons to my website?"
-msgstr ""
-
-#: sermons-nl.php:534
-msgid ""
-"The plugin Sermons-NL uses shortcodes to add sermons to your website. For a "
-"complete list of sermons, you will find a shortcode builder on the landing "
-"page of the plugin, accessible via the main menu of the WP Admin. You can "
-"also add individual sermons or even separate broadcasts to your website. For "
-"this, navigate to the Administration submenu, find the relevant sermon or "
-"item, and click the copy icon for the shortcode. You can paste the shortcode "
-"on your page or in your message."
-msgstr ""
-
 #: sermons-nl.php:536
-msgid ""
-"We have broadcasted an event, but I don't want it to be listed under the "
-"sermons"
+msgid "How do I add a list of (planned) broadcasts to my website?"
 msgstr ""
 
 #: sermons-nl.php:537
 msgid ""
-"You can do so by finding the event in the Administration submenu, and "
-"unticking the \"Include in sermons list\" option. Don't forget to press the "
-"Save button.\n"
-"If you want to prevent a planned broadcast to be listed under the sermons, "
-"you can create a new event manually (\"Create new event\" option in the "
-"Administration submenu) and enter the  date and time of the planned "
-"broadcast. Untick the \"Inclde in sermons list\" option. Note that the "
-"\"Protect from automated deletion\" option should be on, especially if you "
-"create the manual event entry before the day of the broadcast, or else you "
-"will loose it overnight. As soon as the new broadcast is detected, the "
-"plugin will link it to this manual event and will avoid the creation of a "
-"new one.\n"
-"Note that you can include this broadcast on your website, for example in a "
-"news message, by using the event shortcode that you find in the "
-"Administration page."
+"The plugin Sermons-NL uses shortcodes to add (planned) broadcasts to your "
+"website. For a list of (planned) broadcasts, you will find a shortcode "
+"builder on the landing page of the plugin, via the main menu of the WP "
+"Admin. You can also add individual events or even a single broadcast to your "
+"website. To this end, navigate to the Administration submenu, find the "
+"relevant church service or item, and click the copy icon for the given "
+"shortcode. You can paste the shortcode on a page or in a message."
 msgstr ""
 
-#: sermons-nl.php:541
+#: sermons-nl.php:539
+msgid ""
+"We have broadcasted an event that I don't want to include in the list of "
+"(planned) broadcasts. How do I do that?"
+msgstr ""
+
+#: sermons-nl.php:540
+msgid ""
+"You can do so by finding the event in the Administration submenu, and "
+"unticking the \"Include in (planned) broadcasts list\" option. Don't forget "
+"to press the Save button.\n"
+"If you want to prevent a future broadcasted event to be included in the "
+"(planned) broadcasts list, you can create a new event manually (\"Create new "
+"event\" option in the Administration submenu) and enter the appropriate date "
+"and time of the planned event. Untick the \"Include in (planned) broadcasts "
+"list\" option. Note that the \"Protect from automated deletion\" option "
+"should be ticked if you create the manual event entry before the day of the "
+"broadcasted event, otherwise it will be deleted overnight. As soon as the "
+"new broadcast is detected, the plugin will link it to this manual event, "
+"which will avoid inclusion in the (planned) broadcasts list.\n"
+"Note that you can include this broadcasted event on your website, for "
+"example in a news message, by using the shortcode for events that you find "
+"in the Administration page."
+msgstr ""
+
+#: sermons-nl.php:544
 msgid ""
 "The automatic linkage of items from different services has gone wrong. What "
 "should I do?"
 msgstr ""
 
-#: sermons-nl.php:542
+#: sermons-nl.php:545
 msgid ""
 "This sometimes happens, e.g. if the broadcasting is started much earlier so "
-"that linking it to the planned sermon is not unambiguous. It is easy to fix "
-"afterwards. Go to the Administration submenu and find the sermon that has "
-"this error. You can first unlink the item that was not correctly linked. It "
-"will end up under the \"Unlinked items\". If the sermons has no other linked "
-"items, you can now delete it. Next, go to the unlinked items and link it to "
-"another sermon. Only sermons with the same date can be linked."
+"that linking it to the planned event is not unambiguous, or if multiple "
+"broadcasts of the same type are detected, for example if the broadcast "
+"service has been interrupted. It is easy to fix afterwards. Go to the "
+"Administration submenu and find the event  that has this error. You can "
+"unlink the item that was not correctly linked (it will end up under the "
+"\"Unlinked items\") or directly link it to another event. If the event has "
+"no other linked items, you can now delete it. Go to the unlinked items if "
+"you want to link them to another event. Only items with the same date can be "
+"linked."
 msgstr ""
 
-#: sermons-nl.php:544
+#: sermons-nl.php:547
 msgid "Why does Sermons-NL not support Kerkdienst Gemist?"
 msgstr ""
 
-#: sermons-nl.php:545
+#: sermons-nl.php:548
 msgid ""
 "Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only "
 "Kerkomroep is included, because the church for which the plugin was first "
 "developed uses that service. However, adding support for Kerkdienst Gemist "
-"is possible, I would really like to add it in one of the next releases. I "
-"welcome volunteers to test this functionality in a beta version if their "
-"church is using Kerkdienst Gemist and if they would love to use this plugin. "
-"For this, please visit the issue page and add your reaction or send an e-"
-"mail to the developer."
+"is possible if a church using Kerkdienst Gemist is willing to assist in "
+"testing and debugging. In that case, please visit the issue page and add "
+"your reaction or send an e-mail to the developer."
 msgstr ""
 
-#: sermons-nl.php:547
+#: sermons-nl.php:550
 msgid ""
 "Wordpress is occasionally responding very slow since I am using Sermons-NL. "
 "What can I do about it?"
 msgstr ""
 
-#: sermons-nl.php:550
+#: sermons-nl.php:553
 #, php-format
 msgid ""
 "Please check if you are using cron jobs. Sermons-NL will regularly update "
@@ -312,34 +312,33 @@ msgid ""
 "performance, check if your hosting server allows you to use cron jobs.  The "
 "recommended frequency of cron jobs for this Plugin is once every 15 minutes. "
 "Please check for example %1$s this instruction to disable cron in wordpress "
-"%2$s for instruction. If you are already using cron jobs and it is correctly "
-"configured, it is unlikely that the Sermons-NL plugin is slowing down your "
-"website."
+"%2$s. If you are already using cron jobs and it is correctly configured, it "
+"is unlikely that the Sermons-NL plugin is slowing down your website."
 msgstr ""
 
-#: sermons-nl.php:555
+#: sermons-nl.php:558
 msgid ""
 "I get [Sermons-NL invalid shortcode] on my site where a Sermons-NL shortcode "
 "was used"
 msgstr ""
 
-#: sermons-nl.php:556
+#: sermons-nl.php:559
 msgid ""
 "Shortcodes for standalone items may produce the error [invalid shortcode] "
 "for two reasons. If the error mentions (duplication), this means that you "
 "have multiple standalone items on the page, one of them is a duplication. "
-"The plugin doesn't allow you to include a standalone sermon and also a "
-"standalone item from the same sermon on one page as this will cause "
-"conflicts. A second possible explanation is that the standalone sermon or "
-"item that you have included does not exist (any more). Check the "
-"Administration submenu in your WP Admin for the correct shortcode."
+"The plugin doesn't allow you to include the same item or event twice on the "
+"same page as this will cause conflicts. A second possible explanation is "
+"that the standalone event or item that you have included does not exist (any "
+"more). Check the Administration submenu in your WP Admin for the correct "
+"shortcode."
 msgstr ""
 
-#: sermons-nl.php:558
+#: sermons-nl.php:561
 msgid "I encounter another problem with my plugin, what can I do to fix it?"
 msgstr ""
 
-#: sermons-nl.php:559
+#: sermons-nl.php:562
 msgid ""
 "Please visit the Log submenu in your WP Admin first to see if you can "
 "identify the reason for your problem. Check the settings if the Log "
@@ -348,193 +347,195 @@ msgid ""
 "developer while including as much detail as possible."
 msgstr ""
 
-#: sermons-nl.php:590
-msgid "Manage church service calendar and broadcasts"
+#: sermons-nl.php:593
+msgid "manage (planned) broadcasts of church services and other events"
 msgstr ""
 
-#: sermons-nl.php:592
+#: sermons-nl.php:595
 msgid "Previous month"
 msgstr ""
 
-#: sermons-nl.php:593
+#: sermons-nl.php:596
 msgid "Next month"
 msgstr ""
 
-#: sermons-nl.php:594 sermons-nl.php:714
+#: sermons-nl.php:597 sermons-nl.php:717
 msgid "Unlinked items"
 msgstr ""
 
-#: sermons-nl.php:595 sermons-nl.php:780 sermons-nl.php:868
+#: sermons-nl.php:598 sermons-nl.php:783 sermons-nl.php:871
 msgid "Create new event"
 msgstr ""
 
-#: sermons-nl.php:640
+#: sermons-nl.php:643
 msgid "No records found."
 msgstr ""
 
-#: sermons-nl.php:648
+#: sermons-nl.php:651
 msgid "Date"
 msgstr ""
 
-#: sermons-nl.php:649
+#: sermons-nl.php:652
 msgid "Pastor"
 msgstr ""
 
-#: sermons-nl.php:650
+#: sermons-nl.php:653
 msgid "Items"
 msgstr ""
 
-#: sermons-nl.php:657
+#: sermons-nl.php:660
 msgid "Not included"
 msgstr ""
 
-#: sermons-nl.php:658
+#: sermons-nl.php:661
 msgid "Protected"
 msgstr ""
 
-#: sermons-nl.php:661
+#: sermons-nl.php:664
 msgid "Uses Kerktijden source"
 msgstr ""
 
-#: sermons-nl.php:662
+#: sermons-nl.php:665
 msgid "Uses Kerkomroep source"
 msgstr ""
 
-#: sermons-nl.php:663
+#: sermons-nl.php:666
 msgid "Uses YouTube source"
 msgstr ""
 
-#: sermons-nl.php:689
+#: sermons-nl.php:692
 msgid "Cancel"
 msgstr ""
 
-#: sermons-nl.php:710
+#: sermons-nl.php:713
 msgid "Close"
 msgstr ""
 
-#: sermons-nl.php:716
-msgid "Items not linked to an event will not be shown in the sermons listing."
+#: sermons-nl.php:719
+msgid ""
+"Items not linked to an event will not be shown in the (planned) broadcasts "
+"list."
 msgstr ""
 
-#: sermons-nl.php:717
+#: sermons-nl.php:720
 msgid ""
 "Link the item to an existing event by clicking the date or create a new one."
 msgstr ""
 
-#: sermons-nl.php:718
+#: sermons-nl.php:721
 msgid "For new events, the date and time of the linked item is used."
 msgstr ""
 
-#: sermons-nl.php:719
+#: sermons-nl.php:722
 msgid "Or copy the shortcode for adding the single item to your website."
 msgstr ""
 
-#: sermons-nl.php:723
+#: sermons-nl.php:726
 msgid "There are no unlinked items."
 msgstr ""
 
-#: sermons-nl.php:730
+#: sermons-nl.php:733
 msgid "Type"
 msgstr ""
 
-#: sermons-nl.php:732
+#: sermons-nl.php:735
 msgid "Actions"
 msgstr ""
 
-#: sermons-nl.php:755
+#: sermons-nl.php:758
 msgid "Link to event"
 msgstr ""
 
-#: sermons-nl.php:761
+#: sermons-nl.php:764
 msgid "No existing event on this date"
 msgstr ""
 
-#: sermons-nl.php:770 sermons-nl.php:858
+#: sermons-nl.php:773 sermons-nl.php:861
 msgid "No time stamp"
 msgstr ""
 
-#: sermons-nl.php:782 sermons-nl.php:871
+#: sermons-nl.php:785 sermons-nl.php:874
 #, php-format
 msgid "Linking not possible, already has %s"
 msgstr ""
 
-#: sermons-nl.php:801
+#: sermons-nl.php:804
 msgid "Copy event shortcode"
 msgstr ""
 
-#: sermons-nl.php:811
+#: sermons-nl.php:814
 msgid "This event has no linked items."
 msgstr ""
 
-#: sermons-nl.php:812
+#: sermons-nl.php:815
 msgid "Are you sure you want to delete this event?"
 msgstr ""
 
-#: sermons-nl.php:812
+#: sermons-nl.php:815
 msgid "Delete event"
 msgstr ""
 
-#: sermons-nl.php:826
+#: sermons-nl.php:829
 msgid "This event has the following linked items:"
 msgstr ""
 
-#: sermons-nl.php:847
+#: sermons-nl.php:850
 msgid "Link to other event"
 msgstr ""
 
-#: sermons-nl.php:849
+#: sermons-nl.php:852
 msgid "No other existing events on this date"
 msgstr ""
 
-#: sermons-nl.php:869
+#: sermons-nl.php:872
 msgid "Unlink item"
 msgstr ""
 
-#: sermons-nl.php:903
+#: sermons-nl.php:906
 msgid "Event settings"
 msgstr ""
 
-#: sermons-nl.php:907
+#: sermons-nl.php:910
 msgid "Select date-time from"
 msgstr ""
 
-#: sermons-nl.php:910
+#: sermons-nl.php:913
 msgid "auto"
 msgstr ""
 
-#: sermons-nl.php:911
+#: sermons-nl.php:914
 msgid "manual"
 msgstr ""
 
-#: sermons-nl.php:932
-msgid "Select sermon type from"
+#: sermons-nl.php:935
+msgid "Select church service type from"
 msgstr ""
 
-#: sermons-nl.php:944
+#: sermons-nl.php:947
 msgid "Select pastor name from"
 msgstr ""
 
-#: sermons-nl.php:956
+#: sermons-nl.php:959
 msgid "Select description from"
 msgstr ""
 
-#: sermons-nl.php:968
+#: sermons-nl.php:971
 msgid "Other settings"
 msgstr ""
 
-#: sermons-nl.php:969
-msgid "Include in sermons list"
+#: sermons-nl.php:972
+msgid "Include in (planned) broadcasts list"
 msgstr ""
 
-#: sermons-nl.php:973
+#: sermons-nl.php:976
 msgid "Protect from automated deletion"
 msgstr ""
 
-#: sermons-nl.php:977
+#: sermons-nl.php:980
 msgid "Save settings"
 msgstr ""
 
-#: sermons-nl.php:982
+#: sermons-nl.php:985
 msgid ""
 "If auto is selected or if an item is selected that has no date-time, the "
 "order of picking the date-time is (based on availability): kerktijden, "
@@ -542,166 +543,189 @@ msgid ""
 "broadcasted)."
 msgstr ""
 
-#: sermons-nl.php:985
-msgid "If auto is selected, sermons type will be selected from kerktijden."
+#: sermons-nl.php:988
+msgid ""
+"If auto is selected, church service type will be selected from kerktijden."
 msgstr ""
 
-#: sermons-nl.php:988
+#: sermons-nl.php:991
 msgid ""
 "If auto is selected, pastor name will be selected from kerktijden or "
 "kerkomroep (in this order based on availability)."
 msgstr ""
 
-#: sermons-nl.php:991
+#: sermons-nl.php:994
 msgid ""
 "If auto is selected, description will be selected from youtube or kerkomroep "
 "(in this order, based on availability)."
 msgstr ""
 
-#: sermons-nl.php:994
+#: sermons-nl.php:997
 msgid ""
-"If this option is checked, the event will be included when displaying "
-"sermons on the website using the sermons-nl-list shortcode."
+"If this option is checked, the event will be included when displaying the "
+"(planned) broadcasts list on the website using the sermons-nl-list shortcode."
 msgstr ""
 
-#: sermons-nl.php:997
+#: sermons-nl.php:1000
 msgid ""
 "Events that have no linked items are deleted over night. Tick this box to "
 "prevent that from happening."
 msgstr ""
 
-#: sermons-nl.php:1040
+#: sermons-nl.php:1043
 msgid "An incorrect manual date is entered."
 msgstr ""
 
-#: sermons-nl.php:1045
+#: sermons-nl.php:1048
 #, php-format
 msgid "Failed to save event settings: no event with id %d found."
 msgstr ""
 
-#: sermons-nl.php:1052
+#: sermons-nl.php:1055
 msgid ""
 "The manual date and time should not be out of the range of the linked items."
 msgstr ""
 
-#: sermons-nl.php:1055
+#: sermons-nl.php:1058
 msgid "A manual date must be set when the event has no linked items."
 msgstr ""
 
-#: sermons-nl.php:1060
+#: sermons-nl.php:1063
 msgid "When adding a new event, the date and time has to be set manually."
 msgstr ""
 
-#: sermons-nl.php:1064
+#: sermons-nl.php:1067
 msgid "Sorry, failed to create a new event due to an unknown error."
 msgstr ""
 
-#: sermons-nl.php:1221
-msgid "Settings for church services"
+#: sermons-nl.php:1227
+msgid "settings"
 msgstr ""
 
-#: sermons-nl.php:1235
+#: sermons-nl.php:1241
 msgid "Audio and video icons"
 msgstr ""
 
-#: sermons-nl.php:1238
+#: sermons-nl.php:1244
 msgid "Color for past broadcasts"
 msgstr ""
 
-#: sermons-nl.php:1242
+#: sermons-nl.php:1248
 msgid "Color for live broadcasts"
 msgstr ""
 
-#: sermons-nl.php:1246
+#: sermons-nl.php:1252
 msgid "Color for planned broadcasts"
 msgstr ""
 
-#: sermons-nl.php:1257 sermons-nl.php:1298 sermons-nl.php:1321
+#: sermons-nl.php:1263 sermons-nl.php:1304 sermons-nl.php:1343
 #, php-format
 msgid "Enable %s"
 msgstr ""
 
-#: sermons-nl.php:1260 sermons-nl.php:1301
+#: sermons-nl.php:1266 sermons-nl.php:1307
 msgid ""
 "The use of data from this tool on your own website is permitted, provided "
 "that the url and logo are provided. The plugin will add it for you, please "
 "do not hide it."
 msgstr ""
 
-#: sermons-nl.php:1263
+#: sermons-nl.php:1269
 msgid "Kerktijden identifier"
 msgstr ""
 
-#: sermons-nl.php:1267
+#: sermons-nl.php:1273
 #, php-format
 msgid ""
 "Browse to your church's page on %s and copy the number from the url, e.g. "
 "999 in this figure."
 msgstr ""
 
-#: sermons-nl.php:1274 sermons-nl.php:1345
+#: sermons-nl.php:1280 sermons-nl.php:1367
 msgid "Number of weeks back"
 msgstr ""
 
-#: sermons-nl.php:1277 sermons-nl.php:1348
+#: sermons-nl.php:1283 sermons-nl.php:1370
 #, php-format
 msgid "How many weeks to look back when loading the %s archive"
 msgstr ""
 
-#: sermons-nl.php:1282
+#: sermons-nl.php:1288
 msgid "Number of weeks ahead"
 msgstr ""
 
-#: sermons-nl.php:1285
+#: sermons-nl.php:1291
 #, php-format
 msgid "How many weeks ahead in time to load %s data"
 msgstr ""
 
-#: sermons-nl.php:1304
+#: sermons-nl.php:1310
 msgid "Mount point"
 msgstr ""
 
-#: sermons-nl.php:1308
+#: sermons-nl.php:1314
 #, php-format
 msgid ""
 "Browse to your church's page on %s and copy the number from the end of the "
 "url, e.g. 99999 in this figure."
 msgstr ""
 
-#: sermons-nl.php:1324
+#: sermons-nl.php:1320 sermons-nl.php:1375
+msgid "Linkage margin ahead (minutes)"
+msgstr ""
+
+#: sermons-nl.php:1322 sermons-nl.php:1377
+msgid ""
+"When the broadcast is started prior to the start time of a planned event, "
+"what is the maximum interval in minutes to automatically link it to this "
+"event?"
+msgstr ""
+
+#: sermons-nl.php:1328
+msgid "Linkage margin delay (minutes)"
+msgstr ""
+
+#: sermons-nl.php:1330
+msgid ""
+"When the broadcast is started (or detected) after the start time of a "
+"planned event, what is the maximum delay interval in minutes to "
+"automatically link it to this event?"
+msgstr ""
+
+#: sermons-nl.php:1346
 msgid ""
 "Setting the channel may take a while depending on the number of available "
 "videos."
 msgstr ""
 
-#: sermons-nl.php:1329
+#: sermons-nl.php:1351
 msgid ""
 "Browse to your church's YouTube channel and copy the youtube channel ID from "
 "the url."
 msgstr ""
 
-#: sermons-nl.php:1339
+#: sermons-nl.php:1361
 #, php-format
 msgid ""
 "Visit %1$sthe YouTube api developers guide%2$s to learn how to obtain a "
 "YouTube api key."
 msgstr ""
 
-#: sermons-nl.php:1448
+#: sermons-nl.php:1478
 msgid "Successfully saved. "
 msgstr ""
 
-#: sermons-nl.php:1449
+#: sermons-nl.php:1479
 msgid ""
 "It may take some seconds before new data are loaded from the different "
 "archives. If data doesn't load as expected, check the log first."
 msgstr ""
 
-#: sermons-nl.php:1471
-msgid "Log page"
+#: sermons-nl.php:1501
+msgid "log page"
 msgstr ""
 
-#: sermons-nl.php:1474
+#: sermons-nl.php:1504
 #, php-format
 msgid ""
 "Updating data from the sources happens mostly during background processes. "
@@ -709,91 +733,87 @@ msgid ""
 "through the logged messages of these update functions from the past %d days."
 msgstr ""
 
-#: sermons-nl.php:1479
+#: sermons-nl.php:1509
 msgid "There are no logged messages available."
 msgstr ""
 
-#: sermons-nl.php:1617
+#: sermons-nl.php:1647
 msgid ""
 "Sermons-NL has not been configured yet. Please check the Sermons-NL "
 "configuration page in the WordPress dashboard."
 msgstr ""
 
-#: sermons-nl.php:1626
+#: sermons-nl.php:1656
 msgid "Error: Parameter `offset` is an invalid date string in the shortcode."
 msgstr ""
 
-#: sermons-nl.php:1627
+#: sermons-nl.php:1657
 msgid "Error: Parameter `ending` is an invalid date string in the shortcode."
 msgstr ""
 
-#: sermons-nl.php:1628
+#: sermons-nl.php:1658
 msgid ""
 "Error: At least one of the parameters `offset` and/or `ending` should be "
 "provided in the shortcode."
 msgstr ""
 
-#: sermons-nl.php:1629
+#: sermons-nl.php:1659
 msgid ""
 "Error: If one of the parameters `offset` or `ending` is not provided in the "
 "shortcode, parameter `count` should be a positive number."
 msgstr ""
 
-#: sermons-nl.php:1680
-msgid "Load earlier sermons"
+#: sermons-nl.php:1710 sermons-nl.php:1734
+msgid "Load more"
 msgstr ""
 
-#: sermons-nl.php:1704
-msgid "Load later sermons"
-msgstr ""
-
-#: sermons-nl.php:1733 sermons-nl.php:1742
+#: sermons-nl.php:1763 sermons-nl.php:1772
 #, php-format
 msgid "Open the %s website"
 msgstr ""
 
-#: sermons-nl.php:1750
+#: sermons-nl.php:1780
 msgid "Watch this video on YouTube"
 msgstr ""
 
-#: sermons-nl.php:1757
+#: sermons-nl.php:1787
 msgid "Open the YouTube channel"
 msgstr ""
 
-#: sermons-nl.php:1762
+#: sermons-nl.php:1792
 msgid "Source:"
 msgstr ""
 
-#: sermons-nl.php:1769
+#: sermons-nl.php:1799
 msgid "Find out more about the Sermons-NL plugin"
 msgstr ""
 
-#: sermons-nl.php:1991
-msgid "This sermon has been cancelled."
+#: sermons-nl.php:2021
+msgid "The church service has been cancelled."
 msgstr ""
 
-#: sermons-nl.php:1991
-msgid "There are no broadcasts for this sermon."
+#: sermons-nl.php:2021
+msgid "There are no broadcasts yet."
 msgstr ""
 
-#: sermons-nl.php:2176
+#: sermons-nl.php:2206
 #, php-format
 msgid "Listen to %s audio"
 msgstr ""
 
-#: sermons-nl.php:2176 sermons-nl.php:2181 sermons-nl.php:2208
+#: sermons-nl.php:2206 sermons-nl.php:2211 sermons-nl.php:2238
 msgid "live"
 msgstr ""
 
-#: sermons-nl.php:2181 sermons-nl.php:2208
+#: sermons-nl.php:2211 sermons-nl.php:2238
 #, php-format
 msgid "Watch %s video"
 msgstr ""
 
-#: sermons-nl.php:2208
+#: sermons-nl.php:2238
 msgid "planned"
 msgstr ""
 
-#: sermons-nl.php:2210
+#: sermons-nl.php:2240
 msgid "Open video on YouTube"
 msgstr ""

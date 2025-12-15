@@ -249,7 +249,7 @@ class sermons_nl_youtube{
 	            // identify event for this item
 	            $dt = $local_item->dt;
 	            $dt2 = $local_item->dt_end;
-	            if(!$dt2) $dt2 = $dt;
+				if(!$dt2) $dt2 = (new DateTime($dt, sermons_nl::$timezone_db))->add(new DateInterval('PT'.(int)get_option('sermons_nl_youtube_min_ahead').'M'))->format("Y-m-d H:i:s");
 	            $event = sermons_nl_event::get_by_dt($dt, $dt2);
 				// if there is no event within this time window, or if the event already contains a youtube item, create a new one.
 	            if(!$event || $event->youtube !== NULL){
