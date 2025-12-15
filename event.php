@@ -103,8 +103,9 @@ class sermons_nl_event{
         return false;
     }
     
-    public function update_dt_min_max(string $dt_min, string $dt_max){
-        // note that the function doesn't try whether dt_min should become higher or dt_max become lower.
+    // note that the function doesn't try whether dt_min should become higher or dt_max become lower.
+    public function update_dt_min_max(string $dt_min, ?string $dt_max){
+        if($dt_max === null) $dt_max = $dt_min;
         $dt_min = (null === $this->dt_min ? $dt_min : min($dt_min, $this->dt_min));
         $dt_max = (null === $this->dt_max ? $dt_max : max($dt_max, $this->dt_max));
         $this->update(array('dt_min'=>$dt_min, 'dt_max'=>$dt_max));
