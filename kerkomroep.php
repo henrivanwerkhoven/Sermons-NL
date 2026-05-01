@@ -169,7 +169,7 @@ class sermons_nl_kerkomroep{
         ) $charset_collate;";
 	}
 
-    // METHODS TO LOAD NEW DATA FROM kerktijden.nl
+    // METHODS TO LOAD NEW DATA FROM kerkomroep.nl
     
     public static function post_request($command, $args=array()){
 		$postdata = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" . 
@@ -223,6 +223,7 @@ class sermons_nl_kerkomroep{
             return false;
         }
         $remote_data = $obj->response->uitzendingen->uitzending;
+        // if a live broadcast is ongoing, this is always included as the first item.
         // if the function argument $check_first_only is true, or if the first remote item is live, or if the
         // first item of the local data is live, we use compare_live_broadcast to handle the first record
         if($check_first_only || (int)$remote_data[0]->is_live || self::get_live()){
@@ -264,7 +265,9 @@ class sermons_nl_kerkomroep{
                 $local_item = self::add_record($new_data);
                 // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
                 $event = sermons_nl_event::get_by_dt(
+                    # if detection is delayed by x minutes, it should still be linked (option sermons_nl_kerkomroep_min_delay)
                     (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s"),
+                    # if broadcasting started x minutes earlier than planned, it shoud still be linked (option sermons_nl_kerkomroep_min_ahead)
                     (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s")
                 );
                 if(null === $event){
