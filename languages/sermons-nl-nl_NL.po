@@ -305,7 +305,7 @@ msgid ""
 "in the Administration page."
 msgstr ""
 "Je kunt dit doen door in het Beheer submenu de event op te zoeken en de "
-"optie \"Aan lijst (geplande) uitzendingen toevoegen\" uit te vinken. Verkeeg "
+"optie \"Aan lijst (geplande) uitzendingen toevoegen\" uit te vinken. Vergeet "
 "niet om op te slaan.\n"
 "Als je wilt voorkomen dat een toekomstige uitzending bij de (geplande) "
 "uitzendingen wordt getoond, kun je handmatig een nieuwe event aanmaken "
@@ -453,7 +453,7 @@ msgstr ""
 #: sermons-nl.php:593
 msgid "manage (planned) broadcasts of church services and other events"
 msgstr ""
-"Beheer (geplande) uitgezondingen van kerkdiensten en andere evenementen"
+"beheer (geplande) uitgezondingen van kerkdiensten en andere evenementen"
 
 #: sermons-nl.php:595
 msgid "Previous month"
@@ -731,7 +731,7 @@ msgstr ""
 
 #: sermons-nl.php:1227
 msgid "settings"
-msgstr "Instellingen"
+msgstr "instellingen"
 
 #: sermons-nl.php:1241
 msgid "Audio and video icons"
