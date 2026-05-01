@@ -124,7 +124,16 @@ class sermons_nl_kerkomroep{
 	    // if multiple calls to sermons_nl::update_now() are processed at the same time. If it happens, remove more recent items.
         if(count($data) > 1){
             for($i=1; $i<count($data); $i++){
-                (self::get_by_id($data[$i]['id']))->delete();
+                $item = self::get_by_id($data[$i]['id']);
+                $event = $item->event;
+                self::log('sermons_nl_kerkomroep::get_live()', "Deleting duplicate live broadcasting entry (#{$item->id})");
+                $item->delete();
+                if($event){
+                    $deleted = $event->delete_if_redundant();
+                    if($deleted !== false){
+                        self::log('sermons_nl_kerkomroep::get_live()', "Also deleted event because it has no more items (#{$event->id})");
+                    }
+                }
             }
         }
         // return the live event
@@ -271,19 +280,27 @@ class sermons_nl_kerkomroep{
                     (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s")
                 );
                 if(null === $event){
-                    $event = sermons_nl_event::add_record($local_item->dt, $local_item->dt_end);
+                    $event = sermons_nl_event::add_record($local_item->dt);
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). A new event was created (#{$event->id}).");
                 }else{
                     // dt_min and dt_max of the event may need update
                     $event->update_dt_min_max($local_item->dt, $local_item->dt_end);
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). Linked to existing event (#{$event->id}|{$event->dt_min}:{$event->dt_max}).");
                 }
                 // attach the kerkomroep item to the event
                 $local_item->update(array('event_id' => $event->id));
-                sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added.");
             }
         }elseif($local_item !== null){
             // live broadcast is no longer available remotely but still exists locally. Delete it. The broadcast will later be added from the archive.
-            sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted.");
+            $event = $local_item->event;
+            sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted (#{$local_item->id}).");
             $local_item->delete();
+            if($event){
+                $deleted = $event->delete_if_redundant();
+                if($deleted !== false){
+                    self::log("sermons_nl_kerkomroep::compare_live_broadcast", "Also deleted event because it has no more items (#{$deleted})");
+                }
+            }
         }
     }
     

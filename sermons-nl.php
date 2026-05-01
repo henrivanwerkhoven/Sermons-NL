@@ -19,7 +19,7 @@ class sermons_nl{
 	const V = '1.3'; // version to be used for scripts / style sheets
 	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
 
-	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items
+	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items; this might become a setting later
     const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
 
     // SETTINGS
@@ -90,10 +90,16 @@ class sermons_nl{
 	    return self::get_complete_records("yt_planned=1");
 	}
 	
-	// this function will obtain events that have no linked items and that are not protected
-	// it is run by one of the update_xxx functions from this class - they will then be deleted
-	private static function get_complete_redundant_records(){
-	    return self::get_complete_records("kt_id IS NULL AND ko_id IS NULL AND yt_video_id IS NULL AND protected=0");
+	// This function will obtain events that have no linked items and that are not protected.
+	// It is called by one of the update_xxx functions from this class.
+	// These events will then be deleted. the function returns the number of deleted events.
+	private static function drop_redundant_events(){
+	    $rec = self::get_complete_records("kt_id IS NULL AND ko_id IS NULL AND yt_video_id IS NULL AND protected=0");
+		foreach($rec as $e){
+			$event = sermons_nl_event::get_by_id($e->id);
+			$event->delete();
+		}
+		return count($rec);
 	}
 	
 	private static function get_complete_records(?string $where = null, bool $include_non_included=false){
@@ -1319,7 +1325,7 @@ Note that you can include this broadcasted event on your website, for example in
 						<tr class="collapsible-setting">
 							<td>' . esc_html__("Linkage margin ahead (minutes)","sermons-nl") . ':
 								<div class="help"><div>'.
-									esc_html__("When the broadcast is started prior to the start time of a planned event, what is the maximum interval in minutes to automatically link it to this event?", "sermons-nl") .
+									esc_html__("When the broadcast is started prior to the planned start time, what is the maximum interval in minutes to automatically link it to this event? For example, when the broadcasting usually starts at most 30 minutes before the planned start time, you could set this parameter to 45 to be on the safe side.", "sermons-nl") .
 								'<div></div>
 							</td>
 							<td><input type="text" name="sermons_nl_kerkomroep_min_ahead" value="' . ($ko_min_ahead ? esc_attr($ko_min_ahead) : '') .'"/></td>
@@ -1327,7 +1333,7 @@ Note that you can include this broadcasted event on your website, for example in
 						<tr class="collapsible-setting">
 							<td>' . esc_html__("Linkage margin delay (minutes)","sermons-nl") . ':
 								<div class="help"><div>'.
-									esc_html__("When the broadcast is started (or detected) after the start time of a planned event, what is the maximum delay interval in minutes to automatically link it to this event?", "sermons-nl") .
+									esc_html__("When the broadcast is started (or detected) after the start time of a planned event, what is the maximum delay in minutes to automatically link it to this event? Usually, it is sufficient to set this parameter to 30.", "sermons-nl") .
 								'<div></div>
 							</td>
 							<td><input type="text" name="sermons_nl_kerkomroep_min_delay" value="' . ($ko_min_delay ? esc_attr($ko_min_delay) : '') .'"/></td>
@@ -1466,13 +1472,9 @@ Note that you can include this broadcasted event on your website, for example in
 		}
 		if($drop_redundant){
 			// delete events that have become redundant
-			$rec = self::get_complete_redundant_records();
-			if(!empty($rec)){
-				self::log('update_daily', 'removing redundant records (n='.count($rec).')');
-				foreach($rec as $e){
-					$event = sermons_nl_event::get_by_id($e->id);
-					$event->delete();
-				}
+			$nrec = self::drop_redundant_events();
+			if($nrec > 0){
+				self::log("update_daily", "removing redundant records (n={$nrec})");
 			}
 		}
 		$msg = esc_html__('Successfully saved. ', 'sermons-nl') .
@@ -1538,14 +1540,7 @@ Note that you can include this broadcasted event on your website, for example in
             sermons_nl_youtube::get_remote_update_all();
         }
         // delete events that have become redundant
-        $rec = self::get_complete_redundant_records();
-		if(!empty($rec)){
-			self::log('update_daily', 'removing redundant records (n='.count($rec).')');
-			foreach($rec as $e){
-				$event = sermons_nl_event::get_by_id($e->id);
-				$event->delete();
-			}
-		}
+        self::drop_redundant_events();
         // delete log items >LOG_RETENTION_DAYS days old
         global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
