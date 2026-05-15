@@ -26,6 +26,7 @@ class sermons_nl_event{
                     'kerkomroep' => $this->kerkomroep,
                     'youtube' => $this->youtube
                 );
+            case 'has_any_items': return empty(array_filter($this->items, function ($a){ return $a !== null;}));
             case 'dt': 
             case 'dt_start':
                 switch($this->data['dt_from']){
@@ -116,6 +117,14 @@ class sermons_nl_event{
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $wpdb->delete($wpdb->prefix.'sermons_nl_events', array('id' => $this->id));
         unset(self::$events[$this->id]);
+    }
+
+    public function delete_if_redundant(){
+        if($this->protected || $this->has_any_items){
+            return false;
+        }
+        $this->delete();
+        return $this->id;
     }
     
     public function get_all_items(){
