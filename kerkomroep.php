@@ -273,15 +273,14 @@ class sermons_nl_kerkomroep{
                 );
                 $local_item = self::add_record($new_data);
                 // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
-                $event = sermons_nl_event::get_by_dt(
-                    # if detection is delayed by x minutes, it should still be linked (option sermons_nl_kerkomroep_min_delay)
-                    (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s"),
-                    # if broadcasting started x minutes earlier than planned, it shoud still be linked (option sermons_nl_kerkomroep_min_ahead)
-                    (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s")
-                );
+                # if detection is delayed by x minutes, it should still be linked (option sermons_nl_kerkomroep_min_delay)
+                $dt_min = (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s");
+                # if broadcasting started x minutes earlier than planned, it shoud still be linked (option sermons_nl_kerkomroep_min_ahead)
+                $dt_max = (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s");
+                $event = sermons_nl_event::get_by_dt($dt_min, $dt_max);
                 if(null === $event){
                     $event = sermons_nl_event::add_record($local_item->dt);
-                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). A new event was created (#{$event->id}).");
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). No event found between {$dt_min}:{$dt_max}. A new event was created (#{$event->id}).");
                 }else{
                     // dt_min and dt_max of the event may need update
                     $event->update_dt_min_max($local_item->dt, $local_item->dt_end);

@@ -1499,13 +1499,36 @@ Note that you can include this broadcasted event on your website, for example in
 
 		global $wpdb;
 
+		if(isset($_GET['_from'])){
+			$_from = (new DateTime($_GET['_from'], wp_timezone()))->setTimeZone(self::$timezone_db);
+		}else{
+			$_from = new DateTime('now -1 day', self::$timezone_db);
+		}
+		if(isset($_GET['_to'])){
+			$_to = (new DateTime($_GET['_to'], wp_timezone()))->setTimeZone(self::$timezone_db);
+		}else{
+			$_to = new DateTime('now', self::$timezone_db);
+		}
+
 		print '<div>
         <h2>Sermons-NL | '.esc_html__('log page','sermons-nl').'</h2>
+		<p>
+			<form method="get" action="'.esc_attr(admin_url('admin.php')).'">
+				<input type="hidden" name="page" value="sermons-nl-log"/>
+				From:
+				<input type="datetime-local" name="_from" value="' . esc_attr((clone $_from)->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
+				To:
+				<input type="datetime-local" name="_to" value="' . esc_attr((clone $_to)->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
+				<input type="submit" value="'.esc_attr__('Show').'"/>
+			</form>
+		</p>
         <p>' .
+
         /* Translators: Number of log retention days. */
         sprintf(esc_html__('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions from the past %d days.','sermons-nl'), esc_html(self::LOG_RETENTION_DAYS)) . '</p>';
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$log = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_log ORDER BY id DESC");
+		$log = $wpdb->get_results("SELECT * FROM `{$wpdb->prefix}sermons_nl_log` WHERE `dt` >= '{$_from->format('Y-m-d H:i:s')}' AND `dt` <= '{$_to->format('Y-m-d H:i:s')}' ORDER BY `id` DESC");
         
 	    if(empty($log)){
 	        print '<p>' . esc_html__('There are no logged messages available.','sermons-nl') . '</p>';
