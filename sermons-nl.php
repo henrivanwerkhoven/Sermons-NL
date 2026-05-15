@@ -3,7 +3,7 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	Description: List planned and broadcasted Dutch church services or other events in a convenient way
-	Version: 1.3
+	Version: 1.4
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
 	License: GPL2

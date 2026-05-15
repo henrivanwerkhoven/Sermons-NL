@@ -4,7 +4,7 @@ Donate link:
 Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
 Tested up to: 6.9
-Stable tag: 1.3
+Stable tag: 1.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -119,6 +119,12 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Bug fixed: Type-casting of the feature "is_live" to integer resolved an error.
 * Bug fixed: When planned youtube broadcasts are relocated to another event, no error occurs due to the lack of an end date.
 
+= 1.4 =
+* Linkage error with Kerkomroep fixed.
+* Logging message improved to better idenify issues.
+* Log page extended with a date-time filter.
+* Code repetition reduced.
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -141,3 +147,6 @@ Several small improvements
 
 = 1.3 =
 Small feature, improved language and some bug fixes
+
+= 1.4 =
+Fixes linkage error with Kerkomroep and improves logging
