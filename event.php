@@ -26,7 +26,7 @@ class sermons_nl_event{
                     'kerkomroep' => $this->kerkomroep,
                     'youtube' => $this->youtube
                 );
-            case 'has_any_items': return empty(array_filter($this->items, function ($a){ return $a !== null;}));
+            case 'has_any_items': return !empty(array_filter($this->items, function ($a){ return $a !== null;}));
             case 'dt': 
             case 'dt_start':
                 switch($this->data['dt_from']){
@@ -123,8 +123,9 @@ class sermons_nl_event{
         if($this->protected || $this->has_any_items){
             return false;
         }
+        $event_id = $this->id;
         $this->delete();
-        return $this->id;
+        return $event_id;
     }
     
     public function get_all_items(){

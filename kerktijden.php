@@ -149,11 +149,8 @@ class sermons_nl_kerktijden{
 			$q .= " AND dt != %s";
 		}
 		$values = array_merge(array(sprintf("%s 00:00:00",$date_min),sprintf("%s 23:59:59",$date_max)), $dt_list);
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->query(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->prepare($q,$values)
-		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB
+		$wpdb->query($wpdb->prepare($q,$values));
 	}
 	
 	public static function query_create_table($prefix, $charset_collate){

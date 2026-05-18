@@ -129,9 +129,9 @@ class sermons_nl_kerkomroep{
                 self::log('sermons_nl_kerkomroep::get_live()', "Deleting duplicate live broadcasting entry (#{$item->id})");
                 $item->delete();
                 if($event){
-                    $deleted = $event->delete_if_redundant();
-                    if($deleted !== false){
-                        self::log('sermons_nl_kerkomroep::get_live()', "Also deleted event because it has no more items (#{$event->id})");
+                    $deleted_event_id = $event->delete_if_redundant();
+                    if($deleted_event_id !== false){
+                        self::log('sermons_nl_kerkomroep::get_live()', "Also deleted event because it has no more items (#{$deleted_event_id})");
                     }
                 }
             }
@@ -254,7 +254,7 @@ class sermons_nl_kerkomroep{
         $local_item = self::get_live(); // live item from database
         if((int)$remote_item->is_live){
             // currently broadcasting
-            $now = new DateTime('now', sermons_nl::$timezone_db);
+            $now = new DateTimeImmutable('now', sermons_nl::$timezone_db);
             if($local_item !== null){
                 // live broadcast already existing in database, update item
                 $local_item_dt = new DateTime($local_item->dt, sermons_nl::$timezone_db);
@@ -272,19 +272,19 @@ class sermons_nl_kerkomroep{
                     'live' => 1
                 );
                 $local_item = self::add_record($new_data);
-                // allow linking of the live event, even if the broadcasting starts one hour ahead of the scheduled time, or if the plugin detects it up to 30 minutes later
-                # if detection is delayed by x minutes, it should still be linked (option sermons_nl_kerkomroep_min_delay)
-                $dt_min = (clone $now)->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s");
-                # if broadcasting started x minutes earlier than planned, it shoud still be linked (option sermons_nl_kerkomroep_min_ahead)
-                $dt_max = (clone $now)->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s");
+                // allow linking of the live event, even if the broadcasting starts ahead of the scheduled time, or if the plugin detects it later
+                // if detection is delayed by x minutes, it should still be linked (option sermons_nl_kerkomroep_min_delay)
+                $dt_min = $now->sub(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_delay').'M'))->format("Y-m-d H:i:s");
+                // if broadcasting started x minutes earlier than planned, it shoud still be linked (option sermons_nl_kerkomroep_min_ahead)
+                $dt_max = $now->add(new DateInterval('PT'.(int)get_option('sermons_nl_kerkomroep_min_ahead').'M'))->format("Y-m-d H:i:s");
                 $event = sermons_nl_event::get_by_dt($dt_min, $dt_max);
                 if(null === $event){
                     $event = sermons_nl_event::add_record($local_item->dt);
-                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). No event found between {$dt_min}:{$dt_max}. A new event was created (#{$event->id}).");
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). No event found between {$dt_min} and {$dt_max}. A new event was created (#{$event->id}).");
                 }else{
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). Linked to existing event (#{$event->id}|{$event->dt_min} to {$event->dt_max}).");
                     // dt_min and dt_max of the event may need update
                     $event->update_dt_min_max($local_item->dt, $local_item->dt_end);
-                    sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","New live broadcasting item added (#{$local_item->id}|{$local_item->dt}). Linked to existing event (#{$event->id}|{$event->dt_min}:{$event->dt_max}).");
                 }
                 // attach the kerkomroep item to the event
                 $local_item->update(array('event_id' => $event->id));
@@ -295,9 +295,9 @@ class sermons_nl_kerkomroep{
             sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted (#{$local_item->id}).");
             $local_item->delete();
             if($event){
-                $deleted = $event->delete_if_redundant();
-                if($deleted !== false){
-                    self::log("sermons_nl_kerkomroep::compare_live_broadcast", "Also deleted event because it has no more items (#{$deleted})");
+                $deleted_event_id = $event->delete_if_redundant();
+                if($deleted_event_id !== false){
+                    self::log("sermons_nl_kerkomroep::compare_live_broadcast", "Also deleted event because it has no more items (#{$deleted_event_id})");
                 }
             }
         }
@@ -317,12 +317,11 @@ class sermons_nl_kerkomroep{
                 self::compare_live_broadcast($remote_item);
                 continue;
             }
-            $dt = new DateTime($remote_item->datum . ' ' . $remote_item->tijd, sermons_nl::$timezone_ko);
-            $dt->setTimeZone(sermons_nl::$timezone_db);
+            $dt = (new DateTimeImmutable($remote_item->datum . ' ' . $remote_item->tijd, sermons_nl::$timezone_ko))->setTimeZone(sermons_nl::$timezone_db);
             $duration = (int)$remote_item->tijdsduur; // duration in seconds
             $dt_range = array(
                 $dt->format("Y-m-d H:i:s"),
-                (clone $dt)->add(new DateInterval("PT{$duration}S"))->format("Y-m-d H:i:s")
+                $dt->add(new DateInterval("PT{$duration}S"))->format("Y-m-d H:i:s")
             );
             $new_data = array(
                 'dt' => $dt->format("Y-m-d H:i:s"),
