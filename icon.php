@@ -1,6 +1,8 @@
 <?php
-if(defined('ABSPATH')){
-    // this script should be called directly as an image, it does not require the wordpress lib
+if(!defined('ABSPATH')){
+    // phpcs:ignore missing_direct_file_access_protection
+}else{
+    // this script should be called directly as an image, it does not require the wordpress framework
     header("HTTP/1.1 500 Internal Server Error");
     die("Do not include/require icon.php from wordpress");
 }
@@ -13,12 +15,14 @@ if(!isset($_GET['c']) || !preg_match("/^[0-9a-fA-F]{6}\$/", $_GET['c']) || !isse
     header("HTTP/1.1 400 Bad Request");
     die("Requested color or media type not supported.");
 }
-// phpcs:ignore WordPress.Security
+// phpcs:ignore WordPress.Security, WordPress.NamingConventions
 $color = '#'.$_GET['c'];
+// phpcs:ignore WordPress.NamingConventions
 $svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\">";
 // phpcs:ignore WordPress.Security
 if($_GET['m'] == 'a'){
     // audio svg icon
+    // phpcs:ignore WordPress.NamingConventions
     $svg .= "<g fill=\"{$color}\">".
     "<rect x=\"0\" y=\"8\" width=\"4.3\" height=\"9\" rx=\"1\" ry=\"1\"/>".
     "<polygon points=\"6,8.4 6,16.6 13,25 14,25 14,0 13,0\"/>".
@@ -30,6 +34,7 @@ if($_GET['m'] == 'a'){
     "</g>";
 }else{
     // video svg icon
+    // phpcs:ignore WordPress.NamingConventions
     $svg .= "<g fill=\"{$color}\" stroke=\"{$color}\">".
     "<rect x=\"1\" y=\"1\" width=\"23\" height=\"15\" stroke-width=\"2\" fill=\"white\" rx=\"1\" ry=\"1\"/>".
     "<rect x=\"3.5\" y=\"3.5\" width=\"18\" height=\"10\" stroke=\"none\"/>".
@@ -37,6 +42,7 @@ if($_GET['m'] == 'a'){
     "<line x1=\"25%\" y1=\"24\" x2=\"75%\" y2=\"24\" stroke-width=\"2\" stroke-linecap=\"round\"/>".
     "</g>";
 }
+// phpcs:ignore WordPress.NamingConventions
 $svg .= "</svg>";
 // output svg
 header("Content-Type: image/svg+xml");

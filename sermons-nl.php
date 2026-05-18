@@ -3,7 +3,7 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	Description: List planned and broadcasted Dutch church services or other events in a convenient way
-	Version: 1.4
+	Version: 1.5
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
 	License: GPL2
@@ -37,7 +37,7 @@ class sermons_nl{
         "sermons_nl_kerktijden_weeksahead"          => array('type' => 'integer', 'default' => 52),
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
 		"sermons_nl_kerkomroep_min_ahead"           => array('type' => 'integer', 'default' => 60),
-		"sermons_nl_kerkomroep_min_delay"			=> array('type' => 'integer', 'default' => 60),
+		"sermons_nl_kerkomroep_min_delay"			=> array('type' => 'integer', 'default' => 30),
         "sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
@@ -167,11 +167,8 @@ class sermons_nl{
 	    $sql .= "
 	    ORDER BY dt_start ASC";
 	    
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$sql
-		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB
+		$data = $wpdb->get_results($sql);
 	    
 	    return $data;
 
@@ -203,11 +200,8 @@ class sermons_nl{
 	    }
 	    $sql .= "
 	    ) as n WHERE n.dt_start " . ($direction == 'up' ? '<' : '>') . " '" . esc_sql($dt) . "'";
-	    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$res = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$sql
-		);
+	    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB
+		$res = $wpdb->get_results($sql);
 	    return (int)$res[0]->nrec;
 	}
 	
@@ -788,6 +782,7 @@ Note that you can include this broadcasted event on your website, for example in
         		        }
         	    	    $html .= '<li class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($item->item_type).'\', '.esc_attr($item->id).', null);">' . esc_html__('Create new event','sermons-nl') . '</li>';
         	    	    $html .= '</ul>';
+						/* Translators: %s will contain the type of an item */
 						if($footnote) $html .= '<p class="nonlinkable">* ' . sprintf(esc_html__('Linking not possible, already has %s', 'sermons-nl'), $item->item_type) . '</p>';
 						$html .= '</div></a>
             		                </td>
@@ -877,6 +872,7 @@ Note that you can include this broadcasted event on your website, for example in
 								$html .= '<li class="linkable" onclick="sermons_nl_admin.link_item_to_event(\''.esc_attr($type).'\', '.esc_attr($item->id).', null,'.esc_attr($event->id).');">' . esc_html__('Create new event','sermons-nl') . '</li>';
 								$html .= '<li class="linkable" onclick="sermons_nl_admin.unlink_item(\'' . esc_attr($type) . '\', ' . esc_attr($item->id) . ');">' . esc_html__('Unlink item','sermons-nl') . '</li>';
 								$html .= '</ul>';
+								/* Translators: %s will contain the type of an item. */
 								if($footnote) $html .= '<p class="nonlinkable">* ' . sprintf(esc_html__('Linking not possible, already has %s', 'sermons-nl'), $type) . '</p>';
 								$html .= '</div></a>
 									</td>
@@ -1017,6 +1013,7 @@ Note that you can include this broadcasted event on your website, for example in
 		// check nonce
 		check_ajax_referer('sermons-nl-administration');
 		// prep json function
+		// phpcs:ignore  WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 		function returnIt(bool $ok, $errMsg = null){
 			$json = array("action" => "sermons_nl_submit_update_event", "ok" => $ok);
 			if($errMsg) $json['errMsg'] = $errMsg;
@@ -1499,15 +1496,20 @@ Note that you can include this broadcasted event on your website, for example in
 
 		global $wpdb;
 
+		// nonce verification not needed because nothing is stored.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if(isset($_GET['_from'])){
-			$_from = (new DateTime($_GET['_from'], wp_timezone()))->setTimeZone(self::$timezone_db);
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$_from = (new DateTimeImmutable(sanitize_text_field(wp_unslash($_GET['_from'])), wp_timezone()))->setTimeZone(self::$timezone_db);
 		}else{
-			$_from = new DateTime('now -1 day', self::$timezone_db);
+			$_from = new DateTimeImmutable('now -1 day', self::$timezone_db);
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if(isset($_GET['_to'])){
-			$_to = (new DateTime($_GET['_to'], wp_timezone()))->setTimeZone(self::$timezone_db);
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$_to = (new DateTimeImmutable(sanitize_text_field(wp_unslash($_GET['_to'])), wp_timezone()))->setTimeZone(self::$timezone_db);
 		}else{
-			$_to = new DateTime('now', self::$timezone_db);
+			$_to = new DateTimeImmutable('now', self::$timezone_db);
 		}
 
 		print '<div>
@@ -1516,10 +1518,10 @@ Note that you can include this broadcasted event on your website, for example in
 			<form method="get" action="'.esc_attr(admin_url('admin.php')).'">
 				<input type="hidden" name="page" value="sermons-nl-log"/>
 				From:
-				<input type="datetime-local" name="_from" value="' . esc_attr((clone $_from)->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
+				<input type="datetime-local" name="_from" value="' . esc_attr($_from->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
 				To:
-				<input type="datetime-local" name="_to" value="' . esc_attr((clone $_to)->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
-				<input type="submit" value="'.esc_attr__('Show').'"/>
+				<input type="datetime-local" name="_to" value="' . esc_attr($_to->setTimeZone(wp_timezone())->format("Y-m-d\TH:i")) . '"/>
+				<input type="submit" value="'.esc_attr__('Show','sermons-nl').'"/>
 			</form>
 		</p>
         <p>' .
@@ -1528,14 +1530,17 @@ Note that you can include this broadcasted event on your website, for example in
         sprintf(esc_html__('Updating data from the sources happens mostly during background processes. To identify a potential cause of issues that you encounter, you can scroll through the logged messages of these update functions from the past %d days.','sermons-nl'), esc_html(self::LOG_RETENTION_DAYS)) . '</p>';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$log = $wpdb->get_results("SELECT * FROM `{$wpdb->prefix}sermons_nl_log` WHERE `dt` >= '{$_from->format('Y-m-d H:i:s')}' AND `dt` <= '{$_to->format('Y-m-d H:i:s')}' ORDER BY `id` DESC");
+		$log = $wpdb->get_results(
+			$wpdb->prepare("SELECT * FROM `{$wpdb->prefix}sermons_nl_log` WHERE `dt` >= %s AND `dt` <= %s ORDER BY `id` DESC",
+						   $_from->format('Y-m-d H:i:s'),
+						   $_to->format('Y-m-d H:i:s')));
         
 	    if(empty($log)){
 	        print '<p>' . esc_html__('There are no logged messages available.','sermons-nl') . '</p>';
 	    }else{
 	        print '<p class="sermons-nl-log">';
 	        foreach($log as $r => $line){
-				$dt = (new DateTime($line->dt, self::$timezone_db))->setTimeZone(wp_timezone())->format("Y-m-d H:i:s");
+				$dt = (new DateTime($line->dt, self::$timezone_db))->setTimeZone(wp_timezone())->format("D d-m-Y H:i:s");
 				print '<span>' . esc_html($r) . ':</span> ' . esc_html($dt) . ' (' . esc_html($line->fun) . ') ' . esc_html($line->log). '<br/>';
     	    }
     	    print '</p>';
@@ -2394,7 +2399,7 @@ Note that you can include this broadcasted event on your website, for example in
 				"log"
             ) as $surname){
             $table_name = $wpdb->prefix . "sermons_nl_" . $surname;
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB
 			$wpdb->query("DROP TABLE IF EXISTS `$table_name`");
         }
 
@@ -2419,7 +2424,9 @@ Note that you can include this broadcasted event on your website, for example in
     
 }
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals
 sermons_nl::$timezone_db = new DateTimeZone("UTC");
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals
 sermons_nl::$timezone_ko = sermons_nl::$timezone_kt = new DateTimeZone("Europe/Amsterdam");
 
 // include other classes

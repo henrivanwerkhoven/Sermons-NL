@@ -3,8 +3,8 @@ Contributors: henrivanwerkhoven
 Donate link:
 Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
 Requires at least: 6.0
-Tested up to: 6.9
-Stable tag: 1.4
+Tested up to: 7.0
+Stable tag: 1.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -125,6 +125,10 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Log page extended with a date-time filter.
 * Code repetition reduced.
 
+= 1.5 =
+* Bug with Kerkomroep fixed.
+* Several issues identified with check-plugin are fixed.
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -150,3 +154,6 @@ Small feature, improved language and some bug fixes
 
 = 1.4 =
 Fixes linkage error with Kerkomroep and improves logging
+
+= 1.5 =
+Bug fix for Kerkomroep. Fixes several issues identified with check-plugin.
