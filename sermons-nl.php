@@ -16,7 +16,7 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.3'; // version to be used for scripts / style sheets
+	const V = '1.3.1'; // version to be used for scripts / style sheets
 	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
 
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items; this might become a setting later
@@ -38,7 +38,10 @@ class sermons_nl{
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
 		"sermons_nl_kerkomroep_min_ahead"           => array('type' => 'integer', 'default' => 60),
 		"sermons_nl_kerkomroep_min_delay"			=> array('type' => 'integer', 'default' => 30),
-        "sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
+		"sermons_nl_kerkdienstgemist_rssid"         => array('type' => 'integer', 'default' => null),
+		"sermons_nl_kerkdienstgemist_audiostreamid" => array('type' => 'integer', 'default' => null),
+		"sermons_nl_kerkdienstgemist_videostreamid" => array('type' => 'integer', 'default' => null),
+		"sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
 		"sermons_nl_youtube_min_ahead"				=> array('type' => 'integer', 'default' => 60),
@@ -1210,16 +1213,24 @@ Note that you can include this broadcasted event on your website, for example in
 			wp_die("No permission");
 		}
 		
+		// kerktijden settings
 		$kt_id = get_option('sermons_nl_kerktijden_id');
 		$kt_weeksback = get_option('sermons_nl_kerktijden_weeksback');
 		$kt_weeksahead = get_option('sermons_nl_kerktijden_weeksahead');
+		// kerkomroep settings
         $ko_mp = get_option('sermons_nl_kerkomroep_mountpoint');
 		$ko_min_ahead = get_option('sermons_nl_kerkomroep_min_ahead');
 		$ko_min_delay = get_option('sermons_nl_kerkomroep_min_delay');
-        $yt_channel = get_option('sermons_nl_youtube_channel');
+		// kerkdienst gemist settings
+		$kg_rss_id = get_option('sermons_nl_kerkdienstgemist_rssid');
+		$kg_audio_stream_id = get_option('sermons_nl_kerkdienstgemist_audiostreamid');
+		$kg_video_stream_id = get_option('sermons_nl_kerkdienstgemist_videostreamid');
+		// youtube settings
+		$yt_channel = get_option('sermons_nl_youtube_channel');
 		$yt_key = get_option('sermons_nl_youtube_key');
 		$yt_weeksback = get_option('sermons_nl_youtube_weeksback');
 		$yt_min_ahead = get_option('sermons_nl_youtube_min_ahead');
+		// general settings
 		$color_archive = get_option('sermons_nl_icon_color_archive');
 		$color_planned = get_option('sermons_nl_icon_color_planned');
 		$color_live = get_option('sermons_nl_icon_color_live');
@@ -1266,7 +1277,7 @@ Note that you can include this broadcasted event on your website, for example in
 			sprintf(esc_html__("Enable %s","sermons-nl"), "Kerktijden") . '</label></td>
 						</tr>
 						<tr class="collapsible-setting condition">
-						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
+						    <td colspan="2">' . esc_html__("The use of data from this service on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible-setting">
 							<td>' . esc_html__("Kerktijden identifier", "sermons-nl") . ':
@@ -1307,7 +1318,7 @@ Note that you can include this broadcasted event on your website, for example in
 							sprintf(esc_html__("Enable %s","sermons-nl"), "Kerkomroep") . '</label></td>
 						</tr>
 						<tr class="collapsible-setting condition">
-						    <td colspan="2">' . esc_html__("The use of data from this tool on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
+						    <td colspan="2">' . esc_html__("The use of data from this service on your own website is permitted, provided that the url and logo are provided. The plugin will add it for you, please do not hide it.", "sermons-nl") . '</td>
 						</tr>
 						<tr class="collapsible-setting">
 							<td>' . esc_html__("Mount point", "sermons-nl") . ':
@@ -1336,6 +1347,81 @@ Note that you can include this broadcasted event on your website, for example in
 							<td><input type="text" name="sermons_nl_kerkomroep_min_delay" value="' . ($ko_min_delay ? esc_attr($ko_min_delay) : '') .'"/></td>
 						</tr>
 					</tbody>
+
+					<tbody id="kerkdienstgemist_settings"' . ($kg_rss_id ? '' : ' class="settings-disabled"') . '>
+						<tr>
+							<th colspan="2">Kerkdienstgemist.nl</th>
+						</tr>
+						<tr class="always-visible">
+							<td colspan="2"><input type="checkbox"' . ($kg_rss_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermons_nl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">' .
+							/* Translators: service type. */
+							sprintf(esc_html__("Enable %s","sermons-nl"), "Kerkomroep") . '</label></td>
+						</tr>
+						<tr class="collapsible-setting condition">
+							<td colspan="2">' . esc_html__('The use of data from this service on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.','sermons-nl') . '</td>
+						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html('Archive ID','sermons-nl') . ':
+								<div class="help"><div>'.
+									/* Translators: url to admin page of kerkdienstgemist.nl. */
+									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
+									'<br/>' .
+									esc_html__('Open the archive menu','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_archive_btn.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Click the RSS button','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_rss_btn.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Copy the number from one of the RSS URLs.', 'sermons-nl') .
+									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_rss_link.jpg"/>
+								</div></div>
+							</td>
+							<td>
+								<input type="text" name="sermonsNL_kerkdienstgemist_rssid" id="input_kerkdienstgemist_id" value="' . ($kg_rss_id ? esc_attr($kg_rss_id) : '') . '"/>
+							</td>
+						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html__('Audio livestream ID','sermons-nl') . ':
+								<div class="help"><div>'.
+									/* Translators: url to admin page of kerkdienstgemist.nl. */
+									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
+									'<br/>' .
+									esc_html__('Go to the Channels menu','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_btn.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Choose "Kerkradio" in the sub-menu','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_sub.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Click the "streams" button','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_streams_btn.JPG" style="vertical-align:middle"/><br/>' .
+									esc_html__('Copy the number from the public audio stream URL.','sermons-nl') .
+									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_audio_stream.jpg"/><br/>' .
+									esc_html__('If you don\'t want to use the audio livestream, you can just leave this field empty.','sermons-nl') .
+								'</div></div>
+							</td>
+							<td>
+								<input type="text" name="sermonsNL_kerkdienstgemist_audiostreamid" value="' . ($kg_audio_stream_id ? esc_attr($kg_audio_stream_id) : '') . '"/>
+							</td>
+						</tr>
+						<tr class="collapsible-setting">
+							<td>' . esc_html('Video livestream ID','sermons-nl') . ':
+								<div class="help"><div>'.
+									/* Translators: url to admin page of kerkdienstgemist.nl. */
+									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
+									'<br/>' .
+									esc_html__('Go to the Channels menu','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_btn.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Choose "Kerk TV" in the sub-menu','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_sub.jpg" style="vertical-align:middle"/><br/>' .
+									esc_html__('Click the "streams" button','sermons-nl') .
+									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_streams_btn.JPG" style="vertical-align:middle"/><br/>' .
+									esc_html__('Copy the number from the public video stream URL.','sermons-nl') .
+									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_video_stream.jpg"/><br/>' .
+									esc_html__('If you don\'t want to use the video livestream, you can just leave this field empty.','sermons-nl') .
+								'</div></div>
+							</td>
+							<td>
+								<input type="text" name="sermonsNL_kerkdienstgemist_videostreamid" value="' . ($kg_video_stream_id ? esc_attr($kg_video_stream_id) : '') . '"/>
+							</td>
+						</tr>
+					</tbody>
+
                     <tbody id="youtube_settings"' . ($yt_channel ? '' : ' class="settings-disabled"') . '>
 						<tr>
 							<th colspan="2">YouTube.com</th>
