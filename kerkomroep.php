@@ -151,13 +151,6 @@ class sermons_nl_kerkomroep{
 	    return null;
 	}
 	
-	private function validate_remote_urls(){
-        if($this->live) return true; // do not check here whether still live
-        $audio_url_valid = ($this->audio_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($this->audio_url)[0]));
-        $video_url_valid = ($this->video_url && preg_match('/^HTTP\/1\.(0|1) (2|3)/', @get_headers($this->video_url)[0]));
-        return ($audio_url_valid || $video_url_valid);
-    }
-
     public static function query_create_table($prefix, $charset_collate){
 	    return "CREATE TABLE {$prefix}sermons_nl_kerkomroep (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -389,18 +382,14 @@ class sermons_nl_kerkomroep{
             }
             $prev_item = $item;
         }
-        // delete (if audio/video urls also not available) the items that were not found in the archive
+        // delete (if not live broadcasting) the items that were not found in the archive
         if($delete_if_not_exists){
             $not_found = array_diff(array_keys($local_data), $found_items);
             foreach($not_found as $i){
                 $item = $local_data[$i];
-                if(!$item->is_live){
-                    if(!$item->validate_remote_urls()){
-                        sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} no longer exists; item deleted.");
-                        $item->delete();
-                    }else{
-                        sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item {$item->dt} not in archive but url is valid; item retained.");
-                    }
+                if(!$item->live){
+                    sermons_nl::log("sermons_nl_kerkomroep::compare_remote_to_local_data","Item #{$item->id} ({$item->dt}) no longer exists; item deleted.");
+                    $item->delete();
                 }
             }
         }
