@@ -16,11 +16,12 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.3.1'; // version to be used for scripts / style sheets
+	const V = '1.4.12'; // version to be used for scripts / style sheets
 	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
 
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items; this might become a setting later
     const CHECK_INTERVAL = 60; // check for live broadcasts each x seconds with json query; this might become a setting later
+	#const CHECK_INTERVAL = 5;
 
     // SETTINGS
     // timezones are defined at the end of this file
@@ -35,17 +36,21 @@ class sermons_nl{
         "sermons_nl_kerktijden_id"                  => array('type' => 'integer', 'default' => null),
         "sermons_nl_kerktijden_weeksback"           => array('type' => 'integer', 'default' => 52),
         "sermons_nl_kerktijden_weeksahead"          => array('type' => 'integer', 'default' => 52),
+
         "sermons_nl_kerkomroep_mountpoint"          => array('type' => 'integer', 'default' => null),
 		"sermons_nl_kerkomroep_min_ahead"           => array('type' => 'integer', 'default' => 60),
 		"sermons_nl_kerkomroep_min_delay"			=> array('type' => 'integer', 'default' => 30),
-		"sermons_nl_kerkdienstgemist_rssid"         => array('type' => 'integer', 'default' => null),
-		"sermons_nl_kerkdienstgemist_audiostreamid" => array('type' => 'integer', 'default' => null),
-		"sermons_nl_kerkdienstgemist_videostreamid" => array('type' => 'integer', 'default' => null),
+
+		"sermons_nl_kerkdienstgemist_id"            => array('type' => 'integer', 'default' => null),
+		"sermons_nl_kerkdienstgemist_min_ahead"     => array('type' => 'integer', 'default' => 60),
+		"sermons_nl_kerkdienstgemist_min_delay"     => array('type' => 'integer', 'default' => 15),
+
 		"sermons_nl_youtube_channel"                => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_key"                    => array('type' => 'string',  'default' => null),
         "sermons_nl_youtube_weeksback"              => array('type' => 'integer', 'default' => 52),
 		"sermons_nl_youtube_min_ahead"				=> array('type' => 'integer', 'default' => 60),
-        "sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
+
+		"sermons_nl_last_update_time"               => array('type' => 'integer', 'default' => 0),
         "sermons_nl_icon_color_archive"             => array('type' => 'string',  'default' => '#000000'),
         "sermons_nl_icon_color_planned"             => array('type' => 'string',  'default' => '#8c8c8c'),
         "sermons_nl_icon_color_live"                => array('type' => 'string',  'default' => '#0000ff')
@@ -86,18 +91,18 @@ class sermons_nl{
 	}
 	
 	private static function get_complete_records_by_live(){
-	    return self::get_complete_records("yt_live=1 OR ko_live=1");
+	    return self::get_complete_records("yt_live=1 OR ko_live=1 OR kg_audio_live=1 OR kg_video_live=1");
 	}
 	
 	private static function get_complete_records_by_planned(){
-	    return self::get_complete_records("yt_planned=1");
+	    return self::get_complete_records("yt_planned=1 OR kg_audio_planned=1 OR kg_video_planned=1");
 	}
 	
 	// This function will obtain events that have no linked items and that are not protected.
 	// It is called by one of the update_xxx functions from this class.
 	// These events will then be deleted. the function returns the number of deleted events.
 	private static function drop_redundant_events(){
-	    $rec = self::get_complete_records("kt_id IS NULL AND ko_id IS NULL AND yt_video_id IS NULL AND protected=0");
+	    $rec = self::get_complete_records("kt_id IS NULL AND ko_id IS NULL AND kg_id IS NULL AND yt_video_id IS NULL AND protected=0");
 		foreach($rec as $e){
 			$event = sermons_nl_event::get_by_id($e->id);
 			$event->delete();
@@ -115,11 +120,13 @@ class sermons_nl{
 	        (case when dt_from='manual' AND e.dt_manual IS NOT NULL then e.dt_manual
                   when dt_from='kerktijden' AND kt.dt IS NOT NULL then kt.dt
                   when dt_from='kerkomroep' AND ko.dt IS NOT NULL then ko.dt
+                  when dt_from='kerkdienstgemist' AND kg.dt IS NOT NULL then kg.dt
                   when dt_from='youtube' AND yt.dt_planned IS NOT NULL then yt.dt_planned
                   when dt_from='youtube' AND yt.dt_actual IS NOT NULL then yt.dt_actual
                   when kt.dt IS NOT NULL then kt.dt
                   when yt.dt_planned IS NOT NULL then yt.dt_planned
                   when ko.dt IS NOT NULL then ko.dt
+                  when kg.dt IS NOT NULL then kg.dt
                   when yt.dt_actual IS NOT NULL then yt.dt_actual
                   else e.dt_min
                   end) as dt_start,
@@ -130,14 +137,18 @@ class sermons_nl{
             (case when pastor_from='manual' then e.pastor_manual
                   when pastor_from='kerktijden' then ktp.pastor
                   when pastor_from='kerkomroep' then ko.pastor
+                  when pastor_from='kerkdienstgemist' then kg.pastor
                   when ktp.pastor IS NOT NULL then ktp.pastor
-                  else ko.pastor
+                  when ko.pastor IS NOT NULL then ko.pastor
+                  else kg.pastor
                   end) as pastor,
             (case when description_from='manual' then e.description_manual
                   when description_from='youtube' then yt.description
                   when description_from='kerkomroep' then ko.description
+                  when description_from='kerkdienstgemist' then kg.description
                   when yt.description IS NOT NULL then yt.description
-                  else ko.description
+                  when ko.description IS NOT NULL then ko.description
+                  else kg.description
                   end) as description,
     	    kt.id AS kt_id, 
     	    kt.cancelled AS kt_cancelled,
@@ -147,6 +158,15 @@ class sermons_nl{
     	    ko.video_url AS ko_video_url,
     	    ko.video_mimetype AS ko_video_mimetype,
     	    ko.live AS ko_live,
+			kg.id AS kg_id,
+			kg.audio_url AS kg_audio_url,
+			kg.audio_mimetype AS kg_audio_mimetype,
+			kg.audio_live AS kg_audio_live,
+			kg.audio_planned AS kg_audio_planned,
+			kg.video_url AS kg_video_url,
+			kg.video_mimetype AS kg_video_mimetype,
+			kg.video_live AS kg_video_live,
+			kg.video_planned AS kg_video_planned,
     	    yt.id AS yt_id,
     	    yt.video_id AS yt_video_id,
     	    yt.planned AS yt_planned,
@@ -156,6 +176,7 @@ class sermons_nl{
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijden AS kt ON e.id = kt.event_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijdenpastors AS ktp ON ktp.id = kt.pastor_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerkomroep AS ko ON e.id = ko.event_id
+	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerkdienstgemist AS kg ON e.id = kg.event_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_youtube AS yt ON e.id = yt.event_id";
 	    if(!$include_non_included){
     	    $sql .= "
@@ -184,11 +205,13 @@ class sermons_nl{
 	        (case when dt_from='manual' then e.dt_manual
                   when dt_from='kerktijden' then kt.dt
                   when dt_from='kerkomroep' then ko.dt
+                  when dt_from='kerkdienstgemist' then kg.dt
                   when dt_from='youtube' AND yt.dt_planned IS NOT NULL then yt.dt_planned
                   when dt_from='youtube' AND yt.dt_actual IS NOT NULL then yt.dt_actual
                   when kt.dt IS NOT NULL then kt.dt
                   when yt.dt_planned IS NOT NULL then yt.dt_planned
                   when ko.dt IS NOT NULL then ko.dt
+                  when kg.dt IS NOT NULL then kg.dt
                   when yt.dt_actual IS NOT NULL then yt.dt_actual
                   else e.dt_min
                   end) as dt_start
@@ -196,6 +219,7 @@ class sermons_nl{
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijden AS kt ON e.id = kt.event_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijdenpastors AS ktp ON ktp.id = kt.pastor_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerkomroep AS ko ON e.id = ko.event_id
+	    LEFT JOIN {$wpdb->prefix}sermons_nl_kerkdienstgemist AS kg ON e.id = kg.event_id
 	    LEFT JOIN {$wpdb->prefix}sermons_nl_youtube AS yt ON e.id = yt.event_id";
 	    if(!$include_non_included){
     	    $sql .= "
@@ -213,31 +237,35 @@ class sermons_nl{
 	    global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$data = $wpdb->get_results("SELECT * FROM (
+		$data = $wpdb->get_results("SELECT z.* FROM (
 			SELECT
 			e.id,
 			count(e.id) as n_rec,
 			count(DISTINCT(kt.id)) as n_kt,
 			count(DISTINCT(ko.id)) as n_ko,
+			count(DISTINCT(kg.id)) as n_kg,
 			count(DISTINCT(yt.id)) as n_yt,
 			(case when dt_from='manual' then e.dt_manual
 				when dt_from='kerktijden' then kt.dt
 				when dt_from='kerkomroep' then ko.dt
+				when dt_from='kerkdienstgemist' then kg.dt
 				when dt_from='youtube' AND yt.dt_planned IS NOT NULL then yt.dt_planned
 				when dt_from='youtube' AND yt.dt_actual IS NOT NULL then yt.dt_actual
 				when kt.dt IS NOT NULL then kt.dt
 				when yt.dt_planned IS NOT NULL then yt.dt_planned
 				when ko.dt IS NOT NULL then ko.dt
+				when kg.dt IS NOT NULL then kg.dt
 				when yt.dt_actual IS NOT NULL then yt.dt_actual
 				else e.dt_min
 				end) as dt_start
 			FROM {$wpdb->prefix}sermons_nl_events AS e
 			LEFT JOIN {$wpdb->prefix}sermons_nl_kerktijden AS kt ON e.id = kt.event_id
 			LEFT JOIN {$wpdb->prefix}sermons_nl_kerkomroep AS ko ON e.id = ko.event_id
+			LEFT JOIN {$wpdb->prefix}sermons_nl_kerkdienstgemist AS kg ON e.id = kg.event_id
 			LEFT JOIN {$wpdb->prefix}sermons_nl_youtube AS yt ON e.id = yt.event_id
 			GROUP BY e.id
-		) as e
-		WHERE n_rec > 1");
+		) AS z
+		WHERE z.n_rec > 1");
 	    
 	    return $data;
 	}
@@ -257,11 +285,14 @@ class sermons_nl{
 		$ko = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_kerkomroep WHERE event_id IS NULL ORDER BY dt");
 	    $ko = array_map(function($item){$item->item_type = "kerkomroep"; return $item;}, $ko);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$kg = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sermons_nl_kerkdienstgemist WHERE event_id IS NULL ORDER BY dt");
+		$kg = array_map(function($item){$item->item_type = "kerkdienstgemist"; return $item;}, $kg);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$yt = $wpdb->get_results("SELECT y.*,
 								 (case when dt_planned IS NOT NULL then dt_planned else dt_actual end) as dt
 								 FROM {$wpdb->prefix}sermons_nl_youtube as y WHERE event_id IS NULL ORDER BY dt");
 	    $yt = array_map(function($item){$item->item_type = "youtube"; return $item;}, $yt);
-	    $all = array_merge($kt, $ko, $yt);
+	    $all = array_merge($kt, $ko, $kg, $yt);
 	    if($sort){
 	        usort($all, function($item1, $item2){return strtotime($item1->dt) - strtotime($item2->dt);});
 	    }
@@ -281,6 +312,8 @@ class sermons_nl{
 	            return sermons_nl_kerktijden::get_by_id($id);
 	        case 'kerkomroep':
 	            return sermons_nl_kerkomroep::get_by_id($id);
+			case 'kerkdienstgemist':
+				return sermons_nl_kerkdienstgemist::get_by_id($id);
 	        case 'youtube':
 	            return sermons_nl_youtube::get_by_id($id);
 	        default:
@@ -324,6 +357,12 @@ class sermons_nl{
 				$done[] = 'ko';
 			}
 
+			// load kerkdienstgemist archive (all records)
+			if(array_search('kg', $resources) !== false){
+				sermons_nl_kerkdienstgemist::get_remote_data(true);
+				$done[] = 'kg';
+			}
+
 			// load youtube archive
 			if(array_search('yt', $resources) !== false){
 				sermons_nl_youtube::get_remote_data();
@@ -364,6 +403,7 @@ class sermons_nl{
 		$events = sermons_nl_event::get_all();
 		$kerktijden = sermons_nl_kerktijden::get_all();
 		$kerkomroep = sermons_nl_kerkomroep::get_all();
+		$kerkdienstgemist = sermons_nl_kerkdienstgemist::get_all();
 		$youtube = sermons_nl_youtube::get_all();
 		
         $issues = self::get_events_with_issues();
@@ -391,9 +431,9 @@ class sermons_nl{
 					) .
                     ' ' .
                     sprintf(
-						/* translators: %1$d, %2$d and %3$d are replaced by the number of items from Kerktijden, Kerkomroep and YouTube, respectively. */
-						esc_html__('These are based on %1$d entries from Kerktijden, %2$d from Kerkomroep, and %3$d from Youtube.', 'sermons-nl'),
-						count($kerktijden), count($kerkomroep), count($youtube)
+						/* translators: %1$d, %2$d and %3$d are replaced by the number of items from Kerktijden, Kerkomroep, Kerkdienstgemist, and YouTube, respectively. */
+						esc_html__('These are based on %1$d entries from Kerktijden, %2$d from Kerkomroep, %3$d from Kerkdienstgemist and %4$d from Youtube.', 'sermons-nl'),
+						count($kerktijden), count($kerkomroep), count($kerkdienstgemist), count($youtube)
 					) .
                     '</p>';
 		if($cron_msg){
@@ -422,7 +462,7 @@ class sermons_nl{
             print '<strong>' . sprintf(esc_html__("There are %d issues that require your attention.", 'sermons-nl'), count($issues)) . '</strong>';
         }
         if(empty($issues) && !$cron_msg && !$cron_fail){
-            print esc_html__("There are currently no issues to resolve.","sermons-nl");
+            print esc_html__("There are currently no known issues to resolve.","sermons-nl");
         }
         print '</p>
 	            </div>';
@@ -447,6 +487,9 @@ class sermons_nl{
             		            <th>' .
             		            /* Translators: Service type */
 								sprintf(esc_html__('Number of %s items','sermons-nl'), 'Kerkomroep') . '</th>
+								<th>' .
+								/* Translators: Service type */
+								sprintf(esc_html__('Number of %s items','sermons-nl'), 'Kerkdienstgemist') . '</th>
             		            <th>' .
             		            /* Translators: Service type */
 								sprintf(esc_html__('Number of %s items','sermons-nl'), 'YouTube') . '</th>
@@ -457,6 +500,7 @@ class sermons_nl{
                                 <td><a href="javascript:;" onclick="sermons_nl_admin.show_details(' . esc_attr($event->id) . ');">' . esc_html(ucfirst(self::datefmt('short', $event->dt_start))) . '</a></td>
                                 <td>' . esc_html($event->n_kt) . '</td>
                                 <td>' . esc_html($event->n_ko) . '</td>
+                                <td>' . esc_html($event->n_kg) . '</td>
                                 <td>' . esc_html($event->n_yt) . '</td>
                             </tr>';
             }
@@ -546,9 +590,6 @@ Note that you can include this broadcasted event on your website, for example in
 
 			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?","sermons-nl") =>
 			esc_html__("This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned event is not unambiguous, or if multiple broadcasts of the same type are detected, for example if the broadcast service has been interrupted. It is easy to fix afterwards. Go to the Administration submenu and find the event  that has this error. You can unlink the item that was not correctly linked (it will end up under the \"Unlinked items\") or directly link it to another event. If the event has no other linked items, you can now delete it. Go to the unlinked items if you want to link them to another event. Only items with the same date can be linked.","sermons-nl"),
-
-			esc_html__("Why does Sermons-NL not support Kerkdienst Gemist?","sermons-nl") =>
-			esc_html__("Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep is included, because the church for which the plugin was first developed uses that service. However, adding support for Kerkdienst Gemist is possible if a church using Kerkdienst Gemist is willing to assist in testing and debugging. In that case, please visit the issue page and add your reaction or send an e-mail to the developer.","sermons-nl"),
 
 			esc_html__("Wordpress is occasionally responding very slow since I am using Sermons-NL. What can I do about it?","sermons-nl") =>
 			sprintf(
@@ -640,6 +681,13 @@ Note that you can include this broadcasted event on your website, for example in
 		
 		$data = self::get_complete_records_by_dates($dt1, $dt2, true, true);
 
+		// check which services are enabled
+		$kt_enab = !empty(get_option('sermons_nl_kerktijden_id'));
+		$ko_enab = !empty(get_option('sermons_nl_kerkomroep_mountpoint'));
+		$kg_enab = !empty(get_option('sermons_nl_kerkdienstgemist_id'));
+		$yt_enab = !empty(get_option('sermons_nl_youtube_channel'));
+		$num_enab = $kt_enab + $ko_enab + $kg_enab + $yt_enab;
+
         $html = '
     		    <h3 id="sermons_nl_admin_month">' . esc_html(ucfirst(wp_date("F Y", strtotime($dt1)))) . '</h3>';
 		if(empty($data)){
@@ -653,7 +701,7 @@ Note that you can include this broadcasted event on your website, for example in
     	            <th></th>
     	            <th>' . esc_html__("Date","sermons-nl") . '</th>
     	            <th>' . esc_html__("Pastor","sermons-nl") . '</th>
-    	            <th colspan="3">' . esc_html__("Items","sermons-nl") . '</th>
+    	            <th colspan="' . esc_attr($num_enab) . '">' . esc_html__("Items","sermons-nl") . '</th>
     	          </tr>
     	        </thead>
     	        <tbody>';
@@ -663,10 +711,24 @@ Note that you can include this broadcasted event on your website, for example in
 	                <td>' . ($rec->include ? '' : '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/not_included.gif" alt="X" title="' . esc_html__("Not included","sermons-nl") . '"/>') .
 					($rec->protected ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/protected.png" alt="8" title="' . esc_html__("Protected","sermons-nl") . '" height="20"/>' : '') . '</td>
 	                <td><a href="javascript:;" onclick="sermons_nl_admin.show_details('.$rec->id.');">' . esc_html(ucfirst(self::datefmt("short", $rec->dt_start))) . '</a></td>
-	                <td>' . $rec->pastor . '</td>
-	                <td>' . ($rec->kt_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_kt.gif" alt="KT" title="' . esc_html__("Uses Kerktijden source","sermons-nl") . '"/>' : '') . '</td>
-	                <td>' . ($rec->ko_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_ko.gif" alt="KO" title="' . esc_html__("Uses Kerkomroep source","sermons-nl") . '"/>' : '') . '</td>
-	                <td>' . ($rec->yt_video_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_yt.gif" alt="YT" title="' . esc_html__("Uses YouTube source","sermons-nl") . '"/>' : '') . '</td>
+	                <td>' . $rec->pastor . '</td>' .
+					($kt_enab ? '
+	                <td>' . ($rec->kt_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_kt.svg" alt="KT" title="' .
+					/* Translators: name of the service that is used. */
+					sprintf(esc_html__("Uses %s source","sermons-nl"),"Kerktijden") . '"/>' : '') . '</td>' : '') .
+					($ko_enab ? '
+	                <td>' . ($rec->ko_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_ko.svg" alt="KO" title="' .
+					/* Translators: name of the service that is used. */
+					sprintf(esc_html__("Uses %s source","sermons-nl"),"Kerkomroep") . '"/>' : '') . '</td>' : '') .
+					($kg_enab ? '
+	                <td>' . ($rec->kg_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_kg.svg" alt="KG" title="' .
+					/* Translators: name of the service that is used. */
+					sprintf(esc_html__("Uses %s source", "sermons-nl"),"Kerkdienstgemist") . '"/>' : '') . '</td>' : '') .
+					($yt_enab ? '
+	                <td>' . ($rec->yt_video_id ? '<img src="' . esc_url(plugin_dir_url(__FILE__)) . 'img/has_yt.svg" alt="YT" title="' .
+					/* Translators: name of the service that is used. */
+					sprintf(esc_html__("Uses %s source","sermons-nl"),"YouTube") . '"/>' : '') . '</td>' : '') .
+					'
 	              </tr>';
 	        }
 	        $html .= '
@@ -1222,9 +1284,9 @@ Note that you can include this broadcasted event on your website, for example in
 		$ko_min_ahead = get_option('sermons_nl_kerkomroep_min_ahead');
 		$ko_min_delay = get_option('sermons_nl_kerkomroep_min_delay');
 		// kerkdienst gemist settings
-		$kg_rss_id = get_option('sermons_nl_kerkdienstgemist_rssid');
-		$kg_audio_stream_id = get_option('sermons_nl_kerkdienstgemist_audiostreamid');
-		$kg_video_stream_id = get_option('sermons_nl_kerkdienstgemist_videostreamid');
+		$kg_id = get_option('sermons_nl_kerkdienstgemist_id');
+		$kg_min_ahead = get_option('sermons_nl_kerkdienstgemist_min_ahead');
+		$kg_min_delay = get_option('sermons_nl_kerkdienstgemist_min_delay');
 		// youtube settings
 		$yt_channel = get_option('sermons_nl_youtube_channel');
 		$yt_key = get_option('sermons_nl_youtube_key');
@@ -1348,77 +1410,47 @@ Note that you can include this broadcasted event on your website, for example in
 						</tr>
 					</tbody>
 
-					<tbody id="kerkdienstgemist_settings"' . ($kg_rss_id ? '' : ' class="settings-disabled"') . '>
+					<tbody id="kerkdienstgemist_settings"' . ($kg_id ? '' : ' class="settings-disabled"') . '>
 						<tr>
 							<th colspan="2">Kerkdienstgemist.nl</th>
 						</tr>
 						<tr class="always-visible">
-							<td colspan="2"><input type="checkbox"' . ($kg_rss_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermons_nl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">' .
+							<td colspan="2"><input type="checkbox"' . ($kg_id ? ' checked="checked"' : '') . ' id="kerkdienstgemist_checkbox" onclick="sermons_nl_admin.toggle_kerkdienstgemist(this);"/><label for="kerkdienstgemist_checkbox">' .
 							/* Translators: service type. */
-							sprintf(esc_html__("Enable %s","sermons-nl"), "Kerkomroep") . '</label></td>
+							sprintf(esc_html__("Enable %s","sermons-nl"), "Kerkdienstgemist") . '</label></td>
 						</tr>
 						<tr class="collapsible-setting condition">
 							<td colspan="2">' . esc_html__('The use of data from this service on your own website is permitted, provided that the link and logo are provided. The plugin will add it for you, please do not hide it in any way.','sermons-nl') . '</td>
 						</tr>
 						<tr class="collapsible-setting">
-							<td>' . esc_html('Archive ID','sermons-nl') . ':
+							<td>Kerkomroep ID:
 								<div class="help"><div>'.
 									/* Translators: url to admin page of kerkdienstgemist.nl. */
-									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
+									sprintf(esc_html__('Go to %s and find your own church\'s page.','sermons-nl'), '<a href="https://kerkdienstgemist.nl/" target="_blank">https://kerkdienstgemist.nl/</a>') .
 									'<br/>' .
-									esc_html__('Open the archive menu','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_archive_btn.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Click the RSS button','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_rss_btn.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Copy the number from one of the RSS URLs.', 'sermons-nl') .
-									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_rss_link.jpg"/>
+									esc_html__('Copy the number from the address bar and paste it here.','sermons-nl') .
+									': <br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_id_from_address_bar.png"/>
 								</div></div>
 							</td>
 							<td>
-								<input type="text" name="sermonsNL_kerkdienstgemist_rssid" id="input_kerkdienstgemist_id" value="' . ($kg_rss_id ? esc_attr($kg_rss_id) : '') . '"/>
+								<input type="text" name="sermons_nl_kerkdienstgemist_id" id="input_kerkdienstgemist_id" value="' . ($kg_id ? esc_attr($kg_id) : '') . '"/>
 							</td>
 						</tr>
 						<tr class="collapsible-setting">
-							<td>' . esc_html__('Audio livestream ID','sermons-nl') . ':
+							<td>' . esc_html__("Linkage margin ahead (minutes)","sermons-nl") . ':
 								<div class="help"><div>'.
-									/* Translators: url to admin page of kerkdienstgemist.nl. */
-									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
-									'<br/>' .
-									esc_html__('Go to the Channels menu','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_btn.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Choose "Kerkradio" in the sub-menu','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_sub.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Click the "streams" button','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_streams_btn.JPG" style="vertical-align:middle"/><br/>' .
-									esc_html__('Copy the number from the public audio stream URL.','sermons-nl') .
-									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_audio_stream.jpg"/><br/>' .
-									esc_html__('If you don\'t want to use the audio livestream, you can just leave this field empty.','sermons-nl') .
-								'</div></div>
+								esc_html__("When the broadcast is started prior to the planned start time, what is the maximum interval in minutes to automatically link it to this event? For example, when the broadcasting usually starts at most 30 minutes before the planned start time, you could set this parameter to 45 to be on the safe side.", "sermons-nl") .
+								'<div></div>
 							</td>
-							<td>
-								<input type="text" name="sermonsNL_kerkdienstgemist_audiostreamid" value="' . ($kg_audio_stream_id ? esc_attr($kg_audio_stream_id) : '') . '"/>
-							</td>
+							<td><input type="text" name="sermons_nl_kerkdienstgemist_min_ahead" value="' . ($kg_min_ahead ? esc_attr($kg_min_ahead) : '') .'"/></td>
 						</tr>
 						<tr class="collapsible-setting">
-							<td>' . esc_html('Video livestream ID','sermons-nl') . ':
+							<td>' . esc_html__("Linkage margin delay (minutes)","sermons-nl") . ':
 								<div class="help"><div>'.
-									/* Translators: url to admin page of kerkdienstgemist.nl. */
-									sprintf(esc_html__('Go to %s and log in.','sermons-nl'), '<a href="https://admin.kerkdienstgemist.nl/" target="_blank">https://admin.kerkdienstgemist.nl/</a>') .
-									'<br/>' .
-									esc_html__('Go to the Channels menu','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_btn.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Choose "Kerk TV" in the sub-menu','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_channels_sub.jpg" style="vertical-align:middle"/><br/>' .
-									esc_html__('Click the "streams" button','sermons-nl') .
-									': <img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_streams_btn.JPG" style="vertical-align:middle"/><br/>' .
-									esc_html__('Copy the number from the public video stream URL.','sermons-nl') .
-									'<br/><img src="' . esc_attr(plugin_dir_url(__FILE__)) . 'img/kg_video_stream.jpg"/><br/>' .
-									esc_html__('If you don\'t want to use the video livestream, you can just leave this field empty.','sermons-nl') .
-								'</div></div>
+								esc_html__("When the broadcast is started (or detected) after the start time of a planned event, what is the maximum delay in minutes to automatically link it to this event? Usually, it is sufficient to set this parameter to 30.", "sermons-nl") .
+								'<div></div>
 							</td>
-							<td>
-								<input type="text" name="sermonsNL_kerkdienstgemist_videostreamid" value="' . ($kg_video_stream_id ? esc_attr($kg_video_stream_id) : '') . '"/>
-							</td>
+							<td><input type="text" name="sermons_nl_kerkdienstgemist_min_delay" value="' . ($kg_min_delay ? esc_attr($kg_min_delay) : '') .'"/></td>
 						</tr>
 					</tbody>
 
@@ -1527,6 +1559,14 @@ Note that you can include this broadcasted event on your website, for example in
 							$drop_redundant = true;
 							if(!empty($new_value)){
 								$get_data[] = 'ko';
+							}
+							break;
+						case "sermons_nl_kerkdienstgemist_id":
+							// clean kerkdienstgemist data when the rss ID changes
+							$wpdb->query("TRUNCATE TABLE {$wpdb->prefix}sermons_nl_kerkdienstgemist");
+							$drop_redundant = true;
+							if(!empty($new_value)){
+								$get_data[] = 'kg';
 							}
 							break;
 						case "sermons_nl_youtube_channel":
@@ -1643,11 +1683,12 @@ Note that you can include this broadcasted event on your website, for example in
             sermons_nl_kerktijden::get_remote_data_backward();
             sermons_nl_kerktijdenpastors::get_remote_data();
         }
-        // kerkomroep: update the archive and check whether all items are present
-        if(get_option('sermons_nl_kerkomroep_mountpoint')){
-            self::log('update_daily', 'updating kerkoproep (all + url validation)');
-            sermons_nl_kerkomroep::get_remote_data();
-        }
+        // kerkomroep already done fully quarterly because it's a single file
+		// kerkdienstgemist: update the entire archive and check whether all items are present
+		if(get_option('sermons_nl_kerkdienstgemist_id')){
+			self::log('update_daily', 'updating kerkdienstgemist (all)');
+			sermons_nl_kerkdienstgemist::get_remote_data(true);
+		}
         // youtube: update the entire archive, don't search for new items
         if(get_option('sermons_nl_youtube_channel')){
             self::log('update_daily', 'updating youtube (update all known records)');
@@ -1675,6 +1716,11 @@ Note that you can include this broadcasted event on your website, for example in
             self::log('update_quarterly','updating kerkomroep (all)');
             sermons_nl_kerkomroep::get_remote_data();
         }
+        // kerkdienstgemist
+        if(get_option('sermons_nl_kerkdienstgemist_id')){
+			self::log('update_quarterly','updating kerkdienstgemist (most recent)');
+			sermons_nl_kerkdienstgemist::get_remote_data();
+		}
         // youtube: get recent ones. it will include new planned broadcasts, new live broadcases, and update recent items
         if(get_option('sermons_nl_youtube_channel')){
             self::log('update_quarterly','updating youtube (last 10)');
@@ -1686,7 +1732,8 @@ Note that you can include this broadcasted event on your website, for example in
     
     // UPDATE FUNCTION CALLED BY THE SITE FUNCTIONS
     
-    // only checks for live broadcasts. in case of youtube it only does so when a broadcast is close to start
+    // Only checks for live broadcasts.
+    // In case of youtube it only does so when a broadcast is close to start. Otherwise the quotum may be exceeded.
     private static function update_now(){
         $last_update_now_time = get_option("sermons_nl_last_update_time", 0);
 		// first check if the last check was >60 seconds ago. to avoid running out of quota for the youtube api.
@@ -1698,10 +1745,15 @@ Note that you can include this broadcasted event on your website, for example in
                 // checking only the first records is reasonably fast (<0.05 sec) so we can do it during page load
                 sermons_nl_kerkomroep::get_remote_data(true);
             }
+            if(get_option('sermons_nl_kerkdienstgemist_id')){
+				self::log('update_now', 'updating Kerkdienstgemist (live events)');
+				// only checking live and planned events
+				sermons_nl_kerkdienstgemist::get_remote_planned_live();
+			}
             if(get_option('sermons_nl_youtube_channel')){
-                // check if any broadcast is close to start (30 min), or that
-                // should have started, and is not broadcasting yet, or that is
-                // live. include overnight broadcasts: check yesterday and today
+                // check if any broadcast is close to start (<= 30 min), or any that
+                // should have started and is not broadcasting yet, or any that is
+                // live. To include overnight broadcasts, check yesterday and today.
                 $data = self::get_complete_records_by_dates(gmdate("Y-m-d", strtotime("now -1 day")), gmdate("Y-m-d"), true);
                 foreach($data as $item){
                     $time_to = strtotime($item->dt_start) - time();
@@ -1717,7 +1769,6 @@ Note that you can include this broadcasted event on your website, for example in
                 }
             }
             self::log('update_now', 'done');
-
         }
         return true;
     }
@@ -1751,8 +1802,9 @@ Note that you can include this broadcasted event on your website, for example in
 		// check if any service is active
 		$kt_id = (int)get_option("sermons_nl_kerktijden_id");
 		$ko_mp = (int)get_option("sermons_nl_kerkomroep_mountpoint");
+		$kg_id = (int)get_option("sermons_nl_kerkdienstgemist_id");
 		$yt_ch = get_option("sermons_nl_youtube_channel");
-		if(!$kt_id && !$ko_mp && !$yt_ch){
+		if(!($kt_id || $ko_mp || $kg_id || $yt_ch)){
 			return "<p>" . esc_html__("Sermons-NL has not been configured yet. Please check the Sermons-NL configuration page in the WordPress dashboard.","sermons-nl") . "</p>";
 		}
 		
@@ -1767,27 +1819,26 @@ Note that you can include this broadcasted event on your website, for example in
 		if(!$dt1 && !$dt2) return esc_html__("Error: At least one of the parameters `offset` and/or `ending` should be provided in the shortcode.",'sermons-nl');
 		if((!$count || $count <= 0) && (!$dt1 || !$dt2)) return esc_html__("Error: If one of the parameters `offset` or `ending` is not provided in the shortcode, parameter `count` should be a positive number.",'sermons-nl');
 		
-		// check new live broadcasts
-		self::update_now();
-		
 		// get data
 		$data = self::get_complete_records_by_dates($dt1, $dt2, true);
 		
 		// determine which (if any) of the items in data should be opened initially
-		$live = null;
-		$planned = null;
-		$latest = null;
-		foreach($data as $i => $item){
-		    if($item->ko_live || $item->yt_live) $live = $i;
-		    elseif($item->yt_planned && $planned === null) $planned = $i;
-		    elseif($item->dt_start < gmdate("Y-m-d H:i:s")) $latest = $i;
-		}
-		if($live !== null){
-		    $data[$live]->display_open = true;
-		}elseif($planned !== null){
-		    $data[$planned]->display_open = true;
-		}else{
-		    $data[$latest]->display_open = true;
+		if(!empty($data)){
+			$live = null;
+			$planned = null;
+			$latest = null;
+			foreach($data as $i => $item){
+				if($item->ko_live || $item->yt_live) $live = $i;
+				elseif($item->yt_planned && $planned === null) $planned = $i;
+				elseif($item->dt_start < gmdate("Y-m-d H:i:s")) $latest = $i;
+			}
+			if($live !== null){
+				$data[$live]->display_open = true;
+			}elseif($planned !== null){
+				$data[$planned]->display_open = true;
+			}else{
+				$data[$latest]->display_open = true;
+			}
 		}
 		
 		// update count if $data includes less than the number to display, and negative if it is a backward selection
@@ -1849,6 +1900,7 @@ Note that you can include this broadcasted event on your website, for example in
 		$html .= self::add_logos(
 			$kt_id,
 			$ko_mp,
+			$kg_id,
 			null,
 			$yt_ch,
 			$atts['plugin-logo'] != 0
@@ -1860,7 +1912,7 @@ Note that you can include this broadcasted event on your website, for example in
         return $html;
     }
 
-    private static function add_logos(?int $kt_id, ?int $ko_mp, ?string $yt_vid, ?string $yt_ch, bool $plugin_logo=false, bool $div_embed=true){
+    private static function add_logos(?int $kt_id, ?int $ko_mp, ?int $kg_id, ?string $yt_vid, ?string $yt_ch, bool $plugin_logo=false, bool $div_embed=true){
 		$html = '';
 		$logos = array();
 		if($kt_id){
@@ -1879,6 +1931,15 @@ Note that you can include this broadcasted event on your website, for example in
 				"pad" => 11,
 				/* Translators: service type. */
 				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerkomroep")
+			);
+		}
+		if($kg_id){
+			$logos[] = array(
+				"url" => "https://www.kerkdienstgemist.nl/stations/$kg_id",
+				"img" => "logo_kerkdienstgemist.svg",
+				"pad" => 11,
+				/* Translators: service type. */
+				"txt" => sprintf(esc_html__("Open the %s website","sermons-nl"), "Kerkdienstgemist")
 			);
 		}
 		if(($yt_vid)){
@@ -1957,6 +2018,13 @@ Note that you can include this broadcasted event on your website, for example in
 				$events[] = $yt_live->event;
 			}
 		}
+		$kg_live = sermons_nl_kerkdienstgemist::get_live();
+		if($kg_live !== null){
+			$items[] = $kg_live;
+			if($kg_live->event_id && array_search($kg_live->event, $events) === false && $kg_live->event->include){
+				$events[] = $kg_live->event;
+			}
+		}
 		$ko_live = sermons_nl_kerkomroep::get_live();
 		if($ko_live !== null){
 			$items[] = $ko_live;
@@ -1986,6 +2054,9 @@ Note that you can include this broadcasted event on your website, for example in
 				switch($item->type){
 					case 'youtube':
 						$html = self::html_yt_video_link($item, true);
+						break;
+					case 'kerkdienstgemist':
+						$html = self::html_kg_audio_video_link($item, true);
 						break;
 					case 'kerkomroep':
 						$html = self::html_ko_audio_video_link($item, true);
@@ -2072,14 +2143,21 @@ Note that you can include this broadcasted event on your website, for example in
 
 	private static function css_audio_class($event){
 		if($event instanceof sermons_nl_event){
-			$item = $event->kerkomroep;
-			$url = ($item ? $item->audio_url : null);
-			$live = ($item ? $item->live : null);
+			$ko = $event->kerkomroep;
+			$ko_url = ($ko ? $ko->audio_url : null);
+			$ko_live = ($ko ? $ko->live : null);
+			$kg = $event->kerkdienstgemist;
+			$kg_url = ($kg ? $kg->audio_url : null);
+			$kg_live = ($kg ? $kg->audio_live : null);
+			$kg_planned = ($kg ? $kg->audio_planned : null);
 		}else{
-			$url = $event->ko_audio_url;
-			$live = $event->ko_live;
+			$ko_url = $event->ko_audio_url;
+			$ko_live = $event->ko_live;
+			$kg_url = $event->kg_audio_url;
+			$kg_live = $event->kg_audio_live;
+			$kg_planned = $event->kg_audio_planned;
 		}
-		return 'sermons-nl-av' . ($url ? ' sermons-nl-audio' . ($live ? '-live' : '') : '');
+		return 'sermons-nl-av' . ($ko_url || $kg_url || $kg_planned ? ' sermons-nl-audio' . ($ko_live || $kg_live ? '-live' : ($kg_planned ? '-planned' : '')) : '');
 	}
 
 	private static function css_video_class($event){
@@ -2087,6 +2165,10 @@ Note that you can include this broadcasted event on your website, for example in
 			$ko = $event->kerkomroep;
 			$ko_url = ($ko ? $ko->video_url : null);
 			$ko_live = ($ko && $ko_url ? $ko->live : null);
+			$kg = $event->kerkdienstgemist;
+			$kg_url = ($kg ? $kg->video_url : null);
+			$kg_live = ($kg ? $kg->video_live : null);
+			$kg_planned = ($kg ? $kg->video_planned : null);
 			$yt = $event->youtube;
 			$yt_live = ($yt ? $yt->live : null);
 			$yt_planned = ($yt ? $yt->planned : null);
@@ -2094,11 +2176,14 @@ Note that you can include this broadcasted event on your website, for example in
 		}else{
 			$ko_url = $event->ko_video_url;
 			$ko_live = $ko_url && $event->ko_live;
+			$kg_url = $event->kg_video_url;
+			$kg_live = $event->kg_video_live;
+			$kg_planned = $event->kg_video_planned;
 			$yt = $event->yt_video_id;
 			$yt_live = $event->yt_live;
 			$yt_planned = $event->yt_planned;
 		}
-		return 'sermons-nl-av' . ($yt || $ko_url ? ' sermons-nl-video' . ($yt_live || $ko_live ? '-live' : ($yt_planned ? '-planned' : '')) : '');
+		return 'sermons-nl-av' . ($yt || $ko_url || $kg_url || $kg_planned ? ' sermons-nl-video' . ($yt_live || $ko_live || $kg_live ? '-live' : ($yt_planned || $kg_planned ? '-planned' : '')) : '');
 	}
 
     // html list items - function used by above site functions
@@ -2126,7 +2211,7 @@ Note that you can include this broadcasted event on your website, for example in
 				$html .= '<div class="sermons-nl-details"><div>';
 			}
 			$html .= '<div id="sermons_nl_event_'.esc_attr($event->id).($standalone?'_lone':'').'_links" class="sermons-nl-links">';
-			if(!($event->yt_video_id || $event->ko_id)){
+			if(!($event->yt_video_id || $event->ko_id || $event->kg_id)){
 				$html .= ($event->kt_cancelled ? esc_html__('The church service has been cancelled.','sermons-nl') : esc_html__('There are no broadcasts yet.','sermons-nl'));
 			}
 			else{
@@ -2155,7 +2240,7 @@ Note that you can include this broadcasted event on your website, for example in
 		), $atts);
 		$item_type = (string)$atts['type'];
 		$item_id = (int)$atts['id'];
-		if(empty($item_type) || false === array_search($item_type, array('kerkomroep','youtube')) || empty($item_id)) return self::INVALID_SHORTCODE_TEXT;
+		if(empty($item_type) || false === array_search($item_type, array('kerkomroep','kerkdienstgemist','youtube')) || empty($item_id)) return self::INVALID_SHORTCODE_TEXT;
 
 		$item = self::get_item_by_type($item_type, $item_id);
 
@@ -2188,6 +2273,9 @@ Note that you can include this broadcasted event on your website, for example in
 		if($item_type == 'kerkomroep'){
 			/* escaping is done by function */
 			$html .= self::html_ko_audio_video_link($item, true);
+		}elseif($item_type == 'kerkdienstgemist'){
+			/* escaping is done by function */
+			$html .= self::html_kg_audio_video_link($item, true);
 		}elseif($item_type == 'youtube'){
 			/* escaping is done by function */
 			$html .= self::html_yt_video_link($item, true);
@@ -2202,9 +2290,10 @@ Note that you can include this broadcasted event on your website, for example in
 		$html .= self::add_logos(
 			null,
 			($item_type == 'kerkomroep' ? get_option('sermons_nl_kerkomroep_mountpoint') : null),
-								 ($item_type == 'youtube' ? $item->video_id : null),
-								 null,
-						   false // no plugin logo
+			($item_type == 'kerkdienstgemist' ? get_option('sermons_nl_kerkdienstgemist_id') : null),
+			($item_type == 'youtube' ? $item->video_id : null),
+			null,
+			false // no plugin logo
 		);
 
 		$html .= '
@@ -2230,8 +2319,9 @@ Note that you can include this broadcasted event on your website, for example in
 		// protect the page from having twice the same standalone item
 		$items = array(
 			'kerktijden' => ($event[0]->kt_id ? sprintf("kerktijden-%d", $event[0]->kt_id) : null),
-					   'kerkomroep' => ($event[0]->ko_id ? sprintf("kerkomroep-%d", $event[0]->ko_id) : null),
-					   'youtube' => ($event[0]->yt_id ? sprintf("youtube-%d", $event[0]->yt_id) : null)
+			'kerkomroep' => ($event[0]->ko_id ? sprintf("kerkomroep-%d", $event[0]->ko_id) : null),
+			'kerkdienstgemist' => ($event[0]->kg_id ? sprintf("kerkdienstgemist-%d", $event[0]->kg_id) : null),
+			'youtube' => ($event[0]->yt_id ? sprintf("youtube-%d", $event[0]->yt_id) : null)
 		);
 		foreach($items as $item_str){
 			if($item_str){
@@ -2251,10 +2341,11 @@ Note that you can include this broadcasted event on your website, for example in
 		/* escaping is done by the function */
 		$html .= self::add_logos(
 			($items['kerktijden'] ? get_option('sermons_nl_kerktijden_id') : null),
-								 ($items['kerkomroep'] ? get_option('sermons_nl_kerkomroep_mountpoint') : null),
-								 ($items['youtube'] ? $event[0]->yt_video_id : null),
-								 null, // no yt channel
-						   false // no logo
+			($items['kerkomroep'] ? get_option('sermons_nl_kerkomroep_mountpoint') : null),
+			($items['kerkdienstgemist'] ? get_option('sermons_nl_kerkdienstgemist_id') : null),
+			($items['youtube'] ? $event[0]->yt_video_id : null),
+			null, // no yt channel
+			false // no logo
 		);
 
 		$html .= '
@@ -2266,16 +2357,24 @@ Note that you can include this broadcasted event on your website, for example in
 		if($event instanceof sermons_nl_event){
 			$ko_audio_url = ($event->kerkomroep ? $event->kerkomroep->audio_url : null);
 			$ko_video_url = ($event->kerkomroep ? $event->kerkomroep->video_url : null);
+			$kg_audio = ($event->kerkdienstgemist ? $event->kerkdienstgemist->audio_planned == 1 || $event->kerkdienstgemist->audio_url : null);
+			$kg_video = ($event->kerkdienstgemist ? $event->kerkdienstgemist->video_planned == 1 || $event->kerkdienstgemist->video_url : null);
 			$yt_id = ($event->youtube ? $event->youtube->id : null);
 		}else{
 			$ko_audio_url = $event->ko_audio_url;
 			$ko_video_url = $event->ko_video_url;
+			$kg_audio = $event->kg_audio_planned || !empty($event->kg_audio_url);
+			$kg_video = $event->kg_video_planned || !empty($event->kg_video_url);
 			$yt_id = $event->yt_id;
 		}
-	    $html = '';
-	    if($ko_audio_url || $ko_video_url){
+		$html = '';
+		if($ko_audio_url || $ko_video_url){
 			/* escaping is done by the function */
 			$html .= self::html_ko_audio_video_link($event, $standalone);
+		}
+		if($kg_audio || $kg_video){
+			/* escaping is done by the function */
+			$html .= self::html_kg_audio_video_link($event, $standalone);
 		}
 		if($yt_id){
 			/* escaping is done by the function */
@@ -2318,6 +2417,64 @@ Note that you can include this broadcasted event on your website, for example in
 			$html .= '<p id="sermons_nl_kerkomroep_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" class="sermons-nl-video' . ($ko_live ? '-live' : '') . '"><a id="ko_video_'.esc_attr($ko_id).($standalone?'_lone':'').'" href="' . esc_url($ko_video_url) . '" target="_blank" title="' .
 					/* Translators: service type. */
 					sprintf(esc_html__('Watch %s video','sermons-nl'),"Kerkomroep") . '" onclick="return !sermons_nl.playmedia(this, \'' . esc_attr($ko_video_mimetype) . '\', \'ko-video\''.($standalone?',true':'').');">Kerkomroep' . ($ko_live ? ' (' . esc_html__('live','sermons-nl') . ')' : '') . '</a></p>';
+		}
+		return $html;
+	}
+
+	private static function html_kg_audio_video_link($data, $standalone){
+		if($data instanceof sermons_nl_event){
+			$item = $data->kerkdienstgemist;
+			if(!$item) return '';
+		}elseif($data instanceof sermons_nl_kerkdienstgemist){
+			$item = $data;
+		}else{
+			$item = null;
+		}
+		if($item){
+			$kg_id = $item->id;
+			$kg_audio_live = $item->audio_live;
+			$kg_audio_planned = $item->audio_planned;
+			$kg_audio_url = $item->audio_url;
+			$kg_audio_mimetype = $item->audio_mimetype;
+			$kg_video_live = $item->video_live;
+			$kg_video_planned = $item->video_planned;
+			$kg_video_url = $item->video_url;
+			$kg_video_mimetype = $item->video_mimetype;
+		}else{
+			$kg_id = $data->kg_id;
+			$kg_audio_live = $data->kg_audio_live;
+			$kg_audio_planned = $data->kg_audio_planned;
+			$kg_audio_url = $data->kg_audio_url;
+			$kg_audio_mimetype = $data->kg_audio_mimetype;
+			$kg_video_live = $data->kg_video_live;
+			$kg_video_planned = $data->kg_video_planned;
+			$kg_video_url = $data->kg_video_url;
+			$kg_video_mimetype = $data->kg_video_mimetype;
+		}
+		$html = '';
+		if(!($kg_audio_url || $kg_audio_planned || $kg_video_url || $kg_video_planned)){
+			$html .= 'huh, er is niks';
+			$html .= '<pre>' . print_r($data,true) . '</pre>';
+		}
+		if($kg_audio_url || $kg_audio_planned){
+			$html .= '<p id="sermons_nl_kerkdienstgemist_audio_'.esc_attr($kg_id).($standalone?'_lone':'').'" class="sermons-nl-audio' . ($kg_audio_live ? '-live' : ($kg_audio_planned ? '-planned' : '')) . '">';
+			if($kg_audio_url) $html .= '<a id="kg_audio_'.esc_attr($kg_id).($standalone?'_lone':'').'" href="' . esc_url($kg_audio_url) . '" target="_blank" title="' .
+			/* Translators: service type. */
+			sprintf(esc_html__("Listen to %s audio","sermons-nl"),"Kerkdienstgemist") . '" onclick="return !sermons_nl.playmedia(this, \'' . esc_attr($kg_audio_mimetype) . '\', \'kg-audio\''.($standalone?',true':'').');">';
+			else $html .= '<a>';
+			$html .= 'Kerkdienstgemist' . ($kg_audio_live ? ' (' . esc_html__('live','sermons-nl') . ')' : ($kg_audio_planned ? '(' . esc_html__('planned','sermons-nl') . ')' : ''));
+			$html .= '</a>';
+			$html .= '</p>';
+		}
+		if($kg_video_url || $kg_video_planned){
+			$html .= '<p id="sermons_nl_kerkdienstgemist_video_'.esc_attr($kg_id).($standalone?'_lone':'').'" class="sermons-nl-video' . ($kg_video_live ? '-live' : ($kg_video_planned ? '-planned' : '')) . '">';
+			if($kg_video_url) $html .= '<a id="kg_video_'.esc_attr($kg_id).($standalone?'_lone':'').'" href="' . esc_attr($kg_video_url) . '" target="_blank" title="' .
+			/* Translators: service type. */
+			sprintf(esc_html__('Watch %s video','sermons-nl'),"Kerkdienstgemist") . '" onclick="return !sermons_nl.playmedia(this, \'' . esc_attr($kg_video_mimetype) . '\', \'kg-video\''.($standalone?',true':'').');">';
+			else $html .= '<a>';
+			$html .= 'Kerkdienstgemist' . ($kg_video_live ? ' (' . esc_html__('live','sermons-nl') . ')' : ($kg_video_planned ? '(' . esc_html__('planned','sermons-nl') . ')' : ''));
+			$html .= '</a>';
+			$html .= '</p>';
 		}
 		return $html;
 	}
@@ -2381,6 +2538,7 @@ Note that you can include this broadcasted event on your website, for example in
 		$css_tpl = '.sermons-nl-%1$s{background-image: url("%2$sicon.php?c=%3$s&m=%4$s");} ';
 		$css = sprintf($css_tpl, 'audio', $url, $cs['archive'], 'a');
 		$css .= sprintf($css_tpl, 'audio-live', $url, $cs['live'], 'a');
+		$css .= sprintf($css_tpl, 'audio-planned', $url, $cs['planned'], 'a');
 		$css .= sprintf($css_tpl, 'video', $url, $cs['archive'], 'v');
 		$css .= sprintf($css_tpl, 'video-live', $url, $cs['live'], 'v');
 		$css .= sprintf($css_tpl, 'video-planned', $url, $cs['planned'], 'v');
@@ -2417,6 +2575,9 @@ Note that you can include this broadcasted event on your website, for example in
         // create table for kerkomroep broadcasts
         $sql = sermons_nl_kerkomroep::query_create_table($prefix, $charset_collate);
         dbDelta($sql);
+
+		$sql = sermons_nl_kerkdienstgemist::query_create_table($prefix, $charset_collate);
+		dbDelta($sql);
         
         // create table for youtube broadcasts
         $sql = sermons_nl_youtube::query_create_table($prefix, $charset_collate);
@@ -2453,7 +2614,7 @@ Note that you can include this broadcasted event on your website, for example in
 			'display'  => 'Every 15 minutes');
 		return $schedules;
 	}
-    
+
     // deactivation
     public static function deactivate_plugin(){
         // check permission
@@ -2519,6 +2680,7 @@ sermons_nl::$timezone_ko = sermons_nl::$timezone_kt = new DateTimeZone("Europe/A
 require_once(plugin_dir_path(__FILE__) . 'event.php');
 require_once(plugin_dir_path(__FILE__) . 'kerktijden.php');
 require_once(plugin_dir_path(__FILE__) . 'kerkomroep.php');
+require_once(plugin_dir_path(__FILE__) . 'kerkdienstgemist.php');
 require_once(plugin_dir_path(__FILE__) . 'youtube.php');
 
 // ACTIVATION, DEACTIVATION AND UNINSTALL HOOKS

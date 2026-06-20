@@ -8,6 +8,7 @@ class sermons_nl_event{
 	private static $events = null;
 	
     private $data = null;
+    private $items = array();
     
     public function __construct(stdClass $object){
         $this->data = get_object_vars($object);
@@ -18,12 +19,22 @@ class sermons_nl_event{
         if(array_key_exists($key, $this->data)) return $this->data[$key];
         switch($key){
             case 'variables': return array_keys($this->data);
-            case 'kerktijden': return sermons_nl_kerktijden::get_by_event_id($this->id);
-            case 'kerkomroep': return sermons_nl_kerkomroep::get_by_event_id($this->id);
-            case 'youtube': return sermons_nl_youtube::get_by_event_id($this->id);
+            case 'kerktijden':
+                if(!array_key_exists('kt', $this->items)) $this->items['kt'] = sermons_nl_kerktijden::get_by_event_id($this->id);
+                return $this->items['kt'];
+            case 'kerkomroep':
+                if(!array_key_exists('ko', $this->items)) $this->items['ko'] = sermons_nl_kerkomroep::get_by_event_id($this->id);
+                return $this->items['ko'];
+            case 'kerkdienstgemist':
+                if(!array_key_exists('kg', $this->items)) $this->items['kg'] = sermons_nl_kerkdienstgemist::get_by_event_id($this->id);
+                return $this->items['kg'];
+            case 'youtube':
+                if(!array_key_exists('yt', $this->items)) $this->items['yt'] = sermons_nl_youtube::get_by_event_id($this->id);
+                return $this->items['yt'];
             case 'items' : return array(
                     'kerktijden' => $this->kerktijden,
                     'kerkomroep' => $this->kerkomroep,
+                    'kerkdienstgemist' => $this->kerkdienstgemist,
                     'youtube' => $this->youtube
                 );
             case 'has_any_items': return !empty(array_filter($this->items, function ($a){ return $a !== null;}));
@@ -33,11 +44,13 @@ class sermons_nl_event{
                     case 'manual': return $this->data['dt_manual'];
                     case 'kerktijden': return ($this->kerktijden ? $this->kerktijden->dt : null);
                     case 'kerkomroep': return ($this->kerkomroep ? $this->kerkomroep->dt : null);
+                    case 'kerkdienstgemist': return ($this->kerkdienstgemist ? $this->kerkdienstgemist->dt : null);
                     case 'youtube': return ($this->youtube ? ($this->youtube->dt_planned ? $this->youtube->dt_planned : $this->youtube->dt_actual) : null);
                     default: 
                         if($this->kerktijden) return $this->kerktijden->dt;
                         if($this->youtube && $this->youtube->dt_planned) return $this->youtube->dt_planned;
                         if($this->kerkomroep) return $this->kerkomroep->dt;
+                        if($this->kerkdienstgemist) return $this->kerkdienstgemist->dt;
                         if($this->youtube) return $this->youtube->dt_actual;
                         return $this->dt_min; // fallback
                 }
@@ -45,35 +58,45 @@ class sermons_nl_event{
                 if($this->pastor_from=='manual') return $this->pastor_manual;
                 if($this->pastor_from=='kerktijden' && $this->kerktijden) return $this->kerktijden->pastor;
                 if($this->pastor_from=='kerkomroep' && $this->kerkomroep) return $this->kerkomroep->pastor;
+                if($this->pastor_from=='kerkdienstgemist' && $this->kerkdienstgemist) return $this->kerkdienstgemist->pastor;
                 if($this->kerktijden) return $this->kerktijden->pastor;
                 if($this->kerkomroep) return $this->kerkomroep->pastor;
+                if($this->kerkdienstgemist) return $this->kerkdienstgemist->pastor;
                 return '';
             case 'sermontype':
                 if($this->sermontype_from=='manual') return $this->sermontype_manual;
+                if($this->sermontype_from=='kerktijden' && $this->kerktijden) return $this->kerktijden->sermontype;
+                if($this->sermontype_from=='kerkdienstgemist' && $this->kerkdienstgemist) return $this->kerkdienstgemist->title;
                 if($this->kerktijden) return $this->kerktijden->sermontype;
+                if($this->kerkdienstgemist) return $this->kerkdienstgemist->title;
                 return '';
             case 'description':
                 if($this->description_from=='manual') return $this->description_manual;
                 if($this->description_from=='youtube' && $this->youtube) return $this->youtube->description;
-                if($this->description_from=='kerkomroep' && $this->kerkomroep) return $this->kerkomroep.description;
+                if($this->description_from=='kerkomroep' && $this->kerkomroep) return $this->kerkomroep->description;
+                if($this->description_from=='kerkdienstgemist' && $this->kerkdienstgemist) return $this->kerkdienstgemist->description;
                 if($this->youtube) return $this->youtube->description;
                 if($this->kerkomroep) return $this->kerkomroep->description;
+                if($this->kerkdienstgemist) return $this->kerkdienstgemist->description;
                 return '';
             case 'has_audio':
-                return ($this->kerkomroep && $this->kerkomroep->audio_url);
+                return (($this->kerkomroep && $this->kerkomroep->audio_url) || ($this->kerkdienstgemist && $this->kerkdienstgemist->audio_url));
             case 'live':
                 return ($this->audio_live || $this->video_live);
             case 'audio_live':
-                return ($this->kerkomroep && $this->kerkomroep->audio_url && $this->kerkomroep->live);
+                return (($this->kerkomroep && $this->kerkomroep->audio_url && $this->kerkomroep->live) || ($this->kerkdienstgemist && $this->kerkdienstgemist->audio_live));
             case 'has_video':
-                return ($this->kerkomroep && $this->kerkomroep->video_url) || ($this->youtube);
+                return ($this->kerkomroep && $this->kerkomroep->video_url) || ($this->kerkdienstgemist && $this->kerkdienstgemist->video_url) || ($this->youtube);
             case 'video_planned':
-                return ($this->youtube && $this->youtube->planned) && !($this->kerkomroep && $this->kerkomroep->video_url && $this->kerkomroep->live);
+                return (($this->youtube && $this->youtube->planned) ||  ($this->kerkdienstgemist && $this->kerkdienstgemist->video_url && $this->kerkdienstgemist->video_live)) && !$this->video_live;
             case 'video_live':
-                return ($this->kerkomroep && $this->kerkomroep->video_url && $this->kerkomroep->live) || ($this->youtube && $this->youtube->live);
+                return (($this->kerkomroep && $this->kerkomroep->video_url && $this->kerkomroep->live) || ($this->kerkdienstgemist && $this->kerkdienstgemist->video_url && $this->kerkdienstgemist->video_live) || ($this->youtube && $this->youtube->live));
             case 'ko_id':
                 if(!$this->kerkomroep) return null;
                 return $this->kerkomroep->id;
+            case 'kg_id':
+                if(!$this->kerkdienstgemist) return null;
+                return $this->kerkdienstgemist->id;
             case 'yt_video_id':
                 if(!$this->youtube) return null;
                 return $this->youtube->video_id;
@@ -134,6 +157,8 @@ class sermons_nl_event{
         if(!empty($kt)) $ret['kerktijden'] = $kt;
         $ko = sermons_nl_kerkomroep::get_all_by_event_id($this->id);
         if(!empty($ko)) $ret['kerkomroep'] = $ko;
+        $kg = sermons_nl_kerkdienstgemist::get_all_by_event_id($this->id);
+        if(!empty($kg)) $ret['kerkdienstgemist'] = $kg;
         $yt = sermons_nl_youtube::get_all_by_event_id($this->id);
         if(!empty($yt)) $ret['youtube'] = $yt;
         return $ret;
@@ -197,15 +222,15 @@ class sermons_nl_event{
 	public static function query_create_table($prefix, $charset_collate){
         return "CREATE TABLE {$prefix}sermons_nl_events (
         id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-        dt_from enum('auto','manual','kerktijden','kerkomroep','youtube') DEFAULT 'auto' NOT NULL,
+        dt_from enum('auto','manual','kerktijden','kerkomroep','kerkdienstgemist','youtube') DEFAULT 'auto' NOT NULL,
         dt_manual datetime NULL,
         dt_min datetime NULL,
         dt_max datetime NULL,
-        pastor_from enum('auto','manual','kerktijden','kerkomroep') DEFAULT 'auto' NOT NULL,
+        pastor_from enum('auto','manual','kerktijden','kerkomroep','kerkdienstgemist') DEFAULT 'auto' NOT NULL,
         pastor_manual varchar(255) NULL,
-        sermontype_from enum('auto','manual', 'kerktijden') DEFAULT 'auto' NOT NULL,
+        sermontype_from enum('auto','manual','kerktijden','kerkdienstgemist') DEFAULT 'auto' NOT NULL,
         sermontype_manual varchar(255) NULL,
-        description_from enum('auto','manual','kerkomroep','youtube') DEFAULT 'auto' NOT NULL,
+        description_from enum('auto','manual','kerkomroep','kerkdienstgemist','youtube') DEFAULT 'auto' NOT NULL,
         description_manual varchar(65535) NULL,
         include tinyint(1) DEFAULT 1 NOT NULL,
         protected TINYINT NOT NULL DEFAULT 0,
