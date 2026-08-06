@@ -34,7 +34,7 @@ class sermons_nl_youtube{
     
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->update(array($key => $value));
-        else wp_trigger_warning(__CLASS__."::__set", "Trying to set non-existing key `$key` in object of class ".__CLASS__, E_USER_WARNING);
+        else wp_die("In ".__CLASS__."::__set: Trying to set non-existing key `".esc_html($key)."`.", "An error occurred");
     }
     
     public function update($data){
@@ -49,7 +49,7 @@ class sermons_nl_youtube{
             }
             else{
                 unset($data[$key]);
-                wp_trigger_error(__CLASS__."::update", "Trying to update non-existing key `$key` in object of ".__CLASS__, E_USER_WARNING);
+                wp_die("In ".__CLASS__."::update: Trying to update non-existing key `".esc_html($key)."`.", "An error occurred");
             }
         }
         if($update){
@@ -367,7 +367,7 @@ class sermons_nl_youtube{
 			$vid = $item['id'];
 			$i = array_search($vid, $vids);
 			if($i === false){ // should not happen
-			    wp_trigger_error(__CLASS__."::get_remote_details", "Getting data on a video that wasn't asked for from the youtube api", E_USER_WARNING);
+			    wp_die("In ".__CLASS__."::get_remote_details: Getting data on a video that wasn't asked for from the youtube api", "An error occurred");
 			    continue; 
 			}
 			

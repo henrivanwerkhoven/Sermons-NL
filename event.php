@@ -116,7 +116,7 @@ class sermons_nl_event{
             }
             else{
                 unset($data[$key]);
-                wp_trigger_error("sermons_nl::update", "Trying to update non-existing key `$key` in object of sermons_nl.", E_USER_WARNING);
+                wp_die("In sermons_nl::update: Trying to update non-existing key `".esc_html($key)."`.", "An error occurred");
             }
         }
         if($update){

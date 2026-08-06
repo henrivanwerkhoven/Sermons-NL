@@ -32,7 +32,7 @@ class sermons_nl_kerkomroep{
     
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->update(array($key => $value));
-        else wp_trigger_warning("sermons_nl_kerkomroep::__set", "Trying to set non-existing key `$key` in object of class sermons_nl_kerkomroep.", E_USER_WARNING);
+        else wp_die("In sermons_nl_kerkomroep::__set: Trying to set non-existing key `".esc_html($key)."`.", "An error occurred");
     }
     
     public function update($data){
@@ -47,7 +47,7 @@ class sermons_nl_kerkomroep{
                 }
             }else{
                 unset($data[$key]);
-                wp_trigger_error("sermons_nl_kerkomroep::update", "Trying to update non-existing key `$key` in object of sermons_nl_kerkomroep.", E_USER_WARNING);
+                wp_die("In sermons_nl_kerkomroep::update: Trying to update non-existing key `".esc_html($key)."`.", "An error occurred");
             }
         }
         if($update){

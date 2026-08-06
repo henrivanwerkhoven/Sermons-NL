@@ -1,7 +1,7 @@
 === Sermons-NL ===
 Contributors: henrivanwerkhoven
 Donate link:
-Tags: church services, kerkdiensten, kerktijden, kerkomroep, kerkdienstgemist, youtube
+Tags: kerkdiensten, kerktijden, kerkomroep, kerkdienstgemist, youtube
 Requires at least: 6.0
 Tested up to: 7.0
 Stable tag: 1.5
@@ -9,7 +9,7 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-The plugin brings together church services and broadcasting data from Kerktijden.nl, Kerkomroep.nl, Kerkdienstgemist.nl, and Youtube.com, frequently used by Dutch churches.
+The plugin brings together church services and broadcasting data from Kerktijden.nl, Kerkomroep.nl, Kerkdienstgemist.nl, and/or Youtube.com.
 == Description ==
 
 This Wordpress plugin brings together planned church services and broadcasting data from different sources that are being used by Dutch churches and presents them as a single overview. Intended to be used on a church's website to display planned and previously broadcasted church services and other events.

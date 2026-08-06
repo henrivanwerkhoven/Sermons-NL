@@ -317,8 +317,7 @@ class sermons_nl{
 	        case 'youtube':
 	            return sermons_nl_youtube::get_by_id($id);
 	        default:
-	            wp_trigger_error(__CLASS__."::get_item_by_type", "Wrong type '$type' parsed.", E_USER_ERROR);
-	            return null;
+	            wp_die("In ".__CLASS__."::get_item_by_type: Wrong type '".esc_html($type)."' parsed.", "An error occurred");
 	    }
 	}
 
@@ -1150,7 +1149,7 @@ Note that you can include this broadcasted event on your website, for example in
 	    
 	    // check input
 	    if(!array_key_exists('item_type',$_POST) || !array_key_exists('item_id',$_POST) || !array_key_exists('event_id',$_POST)){
-	        wp_trigger_error(__CLASS__."::link_item_to_event", "Missing post parameters.", E_USER_ERROR);
+	        self::log(__CLASS__."::link_item_to_event", "An error occurred in the ajax request: Missing post parameters.");
 	        wp_die(-1);
 	    }
 	    
@@ -1203,7 +1202,7 @@ Note that you can include this broadcasted event on your website, for example in
 	    
 	    // check input
 	    if(!array_key_exists('item_type',$_POST) || !array_key_exists('item_id',$_POST)){
-	        wp_trigger_error(__CLASS__."::unlink_item_to", "Missing post parameters.", E_USER_ERROR);
+	        self::log(__CLASS__."::unlink_item_to", "Error with ajax request: Missing post parameters.");
 	        wp_die(-1);
 	    }
 	    
@@ -1242,7 +1241,7 @@ Note that you can include this broadcasted event on your website, for example in
 	    
 	    // check input
 	    if(!array_key_exists('event_id',$_POST)){
-	        wp_trigger_error(__CLASS__."::delete_event", "Missing post parameters.", E_USER_ERROR);
+	        self::log(__CLASS__."::delete_event", "An error occurred in the ajax request: Missing post parameters.");
 	        wp_die(-1);
 	    }
 	    
@@ -2453,8 +2452,7 @@ Note that you can include this broadcasted event on your website, for example in
 		}
 		$html = '';
 		if(!($kg_audio_url || $kg_audio_planned || $kg_video_url || $kg_video_planned)){
-			$html .= 'huh, er is niks';
-			$html .= '<pre>' . print_r($data,true) . '</pre>';
+			$html .= esc_html__('No (planned) broadcast available', 'sermons-nl');
 		}
 		if($kg_audio_url || $kg_audio_planned){
 			$html .= '<p id="sermons_nl_kerkdienstgemist_audio_'.esc_attr($kg_id).($standalone?'_lone':'').'" class="sermons-nl-audio' . ($kg_audio_live ? '-live' : ($kg_audio_planned ? '-planned' : '')) . '">';

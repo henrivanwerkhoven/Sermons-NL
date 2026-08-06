@@ -35,7 +35,7 @@ class sermons_nl_kerkdienstgemist{
 
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->update(array($key => $value));
-        else wp_trigger_warning("sermons_nl_kerkomroep::__set", "Trying to set non-existing key `$key` in object of class sermons_nl_kerkomroep.", E_USER_WARNING);
+        else wp_die("In sermons_nl_kerkomroep::__set: Trying to set non-existing key `".esc_html($key)."`.", "An error occurred");
     }
 
     public function update($data){
@@ -61,7 +61,7 @@ class sermons_nl_kerkdienstgemist{
                 }
             }else{
                 unset($data[$key]);
-                wp_trigger_error("sermons_nl_kerkdienstgemist::update", "Trying to update non-existing key `$key` in object of sermons_nl_kerkdienstgemist.", E_USER_WARNING);
+                wp_die("In sermons_nl_kerkdienstgemist::update: Trying to update non-existing key `".esc_html($key)."`.", "An error occurred");
             }
         }
         if($update){
@@ -176,7 +176,7 @@ class sermons_nl_kerkdienstgemist{
             return self::get_by_id($wpdb->insert_id);
         }
         sermons_nl::log("sermons_nl_kerkdienstgemist::add_record", "MySQL Error: " . $wpdb->last_error);
-        wp_trigger_error("sermons_nl_kerkdienstgemist::add_record", $wpdb->last_error, E_USER_ERROR);
+        wp_die("In sermons_nl_kerkdienstgemist::add_record: ". esc_html($wpdb->last_error), "An error occurred");
         return null;
     }
 
@@ -486,6 +486,7 @@ class sermons_nl_kerkdienstgemist{
 
     private static function get_audio_video_ratio(){
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
         $result = $wpdb->get_results("SELECT COUNT(audio_id) AS num_audio, COUNT(video_id) AS num_video FROM `{$wpdb->prefix}sermons_nl_kerkdienstgemist` WHERE dt < CURDATE() AND dt > DATE_SUB(CURDATE(), INTERVAL 1 MONTH);");
         if($result[0]->num_video == 0) return 1; // no videos in the past month, assume there will be audio
         return $result[0]->num_audio / $result[0]->num_video;
