@@ -203,9 +203,10 @@ var sermons_nl = {
 	playmedia : function(elm, mimetype, service, standalone=false){
 		var isVideoLivestream = false;
 		var type = mimetype.split("/")[0];
-		if(type == 'application'){
+		if(mimetype == 'video/h264' || mimetype == 'application/vnd.apple.mpegurl'){
+			// create video elm if a playlist is provided (video livestream)
 			isVideoLivestream = true;
-			type = 'video'; // create video elm if a playlist is provided (video livestream)
+			type = 'video';
 		}
 		if(type != 'audio' && type != 'video'){
 		    console.log('Sermons-NL: No audio or video type.');
@@ -242,12 +243,6 @@ var sermons_nl = {
 					case 'yt-video':
 						this.players[this.playing].player.playVideo();
 						return true;
-					case 'kg-video':
-						// check if live. If not, follow default behavior
-						if(isVideoLiveStream){
-							// not possible to play using javascript
-							return true;
-						}
 					default:
 						this.players[this.playing].player.play();
 						return true;
@@ -314,78 +309,70 @@ var sermons_nl = {
 				if(!this.ytapi_loaded){
 					window.onYouTubePlayerAPIReady = function(){sermons_nl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);};
 					// Load the IFrame Player API code asynchronously
-					var js = document.createElement('script');
-					js.src = "https://www.youtube.com/player_api";
-					document.head.appendChild(js);
+					jQuery.getScript("https://www.youtube.com/player_api");
 					this.ytapi_loaded = true;
 				}else{
 					sermons_nl.createYTplayer(player_id,yt_videoid,x,container_id,standalone);
 				}
-			}else if(service == 'kg-video' && isVideoLivestream){
-				i = document.createElement('iframe');
-				i.setAttribute("scrolling","no");
-				i.setAttribute("width", x.clientWidth);
-				i.setAttribute("height", Math.round(x.clientWidth * 9 / 16));
-				i.setAttribute("allowTransparency","true");
-				i.setAttribute("frameborder","0");
-				i.setAttribute("borderwidth","0");
-				i.setAttribute("borderheight","0");
-				i.setAttribute("src", elm.href.replace(/\.m3u(8|)/,"/embed")); 
-				i.setAttribute("allowfullscreen","allowfullscreen");
-				i.setAttribute("allowTransparency","true");
-				i.setAttribute("mozallowfullscreen","true");
-				i.setAttribute("webkitallowfullscreen","true");
-				i.setAttribute("allow","autoplay; fullscreen");
-				d.appendChild(i);
-				x.appendChild(d);
-				this.players[this.playing] = {div: d, li: li, player: i, service: service, isVideoLivestream: true};
 			}else{
 				m = document.createElement(type);
 				m.setAttribute('controls','controls');
 				m.setAttribute('autoplay','autoplay');
-				d.appendChild(m);
 				s = document.createElement('source');
 				s.setAttribute('src',elm.href);
-				s.setAttribute('type',mimetype);
 				m.appendChild(s);
-				m.appendChild(document.createTextNode(type + " afspelen wordt niet ondersteund door uw browser."));
-				if(m.canPlayType(mimetype)){
-					x.appendChild(d);
-				}else if(type=='video'){
-					m.setAttribute('width', x.clientWidth);
-					m.setAttribute('class','video-js');
-					if(this.vjs_loaded){
-						x.appendChild(d);
-						videojs(m, {});
-					}else{
-						// add video-js framework
-						var css = document.createElement("link");
-						css.setAttribute("rel","stylesheet");
-						css.setAttribute("type","text/css");
-						css.setAttribute("href",sermons_nl.plugin_url+"/css/video-js.css");
-						document.head.appendChild(css);
-						var js = document.createElement('script');
-						js.onload = function(){
-							x.appendChild(d);
-							videojs(m, {});
+				m.appendChild(document.createTextNode("Playing ".concat(type, " is not supported by your browser.")));
+				d.appendChild(m);
+				x.appendChild(d);
+				if((service == 'kg-video' || service == 'ko-video') && isVideoLivestream){
+					// hls stream
+					m.setAttribute('playsinline','playsinline');
+					s.setAttribute('type','application/x-mpegURL');
+					if(!m.canPlayType('application/vnd.apple.mpegurl')){
+						// no native support
+						if(window.Hls){
+							// hls.js already loaded
+							sermons_nl.playHls(elm, m);
+						}else{
+							// hls.js needed
+							jQuery.getScript('https://cdn.jsdelivr.net/npm/hls.js@latest',function(data, textStatus) {
+								if(textStatus == 'success' && window.Hls){
+									sermons_nl.playHls(elm, m);
+								}else{
+									console.log("Sermons-NL: Error loading hls.js: ".concat(textStatus));
+								}
+							});
+							// fix aspect ratio as loading of video is pending asynchronous script loading
+							m.style.aspectRatio = '16/9';
 						}
-						js.src = sermons_nl.plugin_url+"/js/video.min.js";
-						document.head.appendChild(js);
-						this.vjs_loaded = true;
 					}
+					this.players[this.playing] = {div: d, li: li, player: m, service: service, isVideoLivestream: true};
 				}else{
-					return false; // cannot play
+					s.setAttribute('type',mimetype);
+					if(!m.canPlayType(mimetype)){
+						console.log("Sermons-NL: unsupported ".concat(type," type: ", mimetype));
+						return false; // cannot play
+					}
+					this.players[this.playing] = {div: d, li: li, player: m, service: service};
 				}
-				this.players[this.playing] = {div: d, li: li, player: m, service: service};
 			}
 		}
 		if(type == 'video' && service != 'yt-video' && !(service == 'kg-video' && isVideoLivestream)){
 			m.addEventListener('canplay', function(){x.parentNode.style.height = x.clientHeight + 'px';});
 		}
 		if(!standalone){
-			x.parentNode.style.height = x.clientHeight + "px";
+			x.parentNode.style.height = (x.clientHeight+5) + "px";
 		}
 		return true;
+	},
+	playHls : function(elm, m){
+		if(Hls.isSupported()){
+			const hls = new Hls({ lowLatencyMode: true });
+			hls.loadSource(elm.href);
+			hls.attachMedia(m);
+		}else{
+			console.log('Sermons-NL: HLS life stream is not supported by this browser.');
+		}
 	},
 	createYTplayer : function(player_id,yt_videoid,x,container_id,standalone){
 		// create the player
@@ -425,6 +412,8 @@ jQuery(document).ready(function($){
 	if((x_list != null || x_events.length > 0 || x_items.length > 0) && sermons_nl.check_interval > 0 && sermons_nl.check_interval != Infinity){
 		sermons_nl.check_list = (x_list != null);
 		sermons_nl.check_lone = (x_items.length > 0 || x_events.length > 0);
+		// check for new live events now and every interval
+		sermons_nl.checkstatus();
 		sermons_nl.timer = setInterval(sermons_nl.checkstatus, sermons_nl.check_interval*1000);
 	}
 	if(x_list != null){

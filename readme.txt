@@ -1,15 +1,15 @@
 === Sermons-NL ===
 Contributors: henrivanwerkhoven
 Donate link:
-Tags: church services, kerkdiensten, kerktijden, kerkomroep, youtube
+Tags: kerkdiensten, kerktijden, kerkomroep, kerkdienstgemist, youtube
 Requires at least: 6.0
-Tested up to: 7.0
+Tested up to: 7.1
 Stable tag: 1.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-The plugin brings together church services and broadcasting data from Kerktijden.nl, Kerkomroep.nl and Youtube.com, frequently used by Dutch churches.
+The plugin brings together church services and broadcasting data from Kerktijden.nl, Kerkomroep.nl, Kerkdienstgemist.nl, and/or Youtube.com.
 == Description ==
 
 This Wordpress plugin brings together planned church services and broadcasting data from different sources that are being used by Dutch churches and presents them as a single overview. Intended to be used on a church's website to display planned and previously broadcasted church services and other events.
@@ -17,7 +17,8 @@ This Wordpress plugin brings together planned church services and broadcasting d
 Services being used are:
 
 + Kerktijden.nl: a website where churches can record their scheduled church services
-+ Kerkomroep.nl: a website that churches use to audio and video broadcast their church services 
++ Kerkdienstgemist.nl: a website that churches use to audio and video broadcast their church services
++ Kerkomroep.nl: a website that churches use to audio and video broadcast their church services
 + Youtube.com: a website that churches use to video broadcast their church services
 
 == Installation ==
@@ -28,13 +29,15 @@ Setting up the plugin is very easy. Go to Sermons-NL > configuration in the WP d
 
 == External services ==
 
-This plugin connects to a total of three APIs to obtain church services and broadcasting data. This is needed to present the planned and broadcasted church services and other events on the website.
+This plugin connects to a maximum of four APIs, depending on your settings, to obtain church services and broadcasting data. This is needed to present the planned and broadcasted church services and other events on the website.
 
 The first API, api.kerktijden.nl, contains data from their own church from [Kerktijden](https://www.kerktijden.nl), such as the date and time of the church service and the name of the church service leader. The plugin will send one request to load future church services once every 15 minutes. It will additionally load the historical archive, up to the number of weeks indicated in the plugin's configuation page, once every day so that changes of these data are kept up to date. These data entered by the church themselves and are publicly available. "Kerktijden.nl offers local church communities the opportunity to use the entered data to their local website by means of a widget. [...] Two conditions apply: 1) The logo of kerktijden must remain visible. 2) The link to kerktijden.nl must remain visible." (Translated from (https://www.kerktijden.nl/service/veelgestelde-vragen/).) The plugin will automatically add the Kerktijden logo with url to the church's Kerktijden.nl page when data from this service are shown. This service is provided by Kerktijden: Terms of use: not available, [Privacy policy, in Dutch](https://service.erdee.nl/application/files/4217/3151/1647/Privacyverklaring-EMG-2022-03-29_1.pdf).
 
-The second API, www.kerkomroep.nl, contains data of broadcasts, both video and audio, broadcasting date and time, and potentially additional data such as the name of the church service leader. The plugin will check for life broadcasts every time a person visits the website page containing Sermons-NL data. Additinally it will update the archive once every 15 minutes. The plugin will only be able to retrieve these data when publicly available (a setting in Kerkomroep managed by the church). "The church is free to publish its own church services on its own website. Its archives that are on [the Kerkomroep] servers are and remain [the church's] property. What you do with them and how you implement these services (via a link or an API or Plugin) does not matter." (Personal communication from Kerktijden.) To acknowledge the source and for consistency, the plugin will display the logo and url of Kerkomroep if data from this service is shown. This service is provided by Kerkomroep: Terms of use: not avaiable, [Privacy policy, in Dutch](https://kerkomroep.nl/privacy/).
+The second API, www.kerkomroep.nl, contains data of broadcasts, both video and audio, broadcasting date and time, and potentially additional data such as the name of the church service leader. The plugin will check for life broadcasts every time a person visits the website page containing Sermons-NL data. Additinally it will update the archive once every 15 minutes. The plugin will only be able to retrieve these data when publicly available (a setting in Kerkomroep managed by the church). "The church is free to publish its own church services on its own website. Its archives that are on [the Kerkomroep] servers are and remain [the church's] property. What you do with them and how you implement these services (via a link or an API or Plugin) does not matter." (Personal communication from Kerkomroep.) To acknowledge the source and for consistency, the plugin will display the logo and url of Kerkomroep if data from this service is shown. This service is provided by Kerkomroep: Terms of use: not avaiable, [Privacy policy, in Dutch](https://kerkomroep.nl/privacy/).
 
-The third API, www.googleapis.com (YouTube Data API) contains data of video's. The plugin obtains video's from the channel indicated in the settings page. It will load data from the most recent 10 broadcasted or planned videos once every 15 minutes and will obtain the entire archive (up to the number of weeks indicated in the plugin's configuation page) once every day. When a broadcast is planned and approaching, the plugin will request the status once every minute, if there is a site visitor. To acknowledge the source and for consistency, the plugin display the YouTube logo with url to the YouTube channel if data from this service is shown. This service is provided by Google: [Terms of use](https://developers.google.com/youtube/terms/api-services-terms-of-service), [Privacy policy](https://www.youtube.com/howyoutubeworks/privacy/).
+The third API, www.kerkdienstgemist.nl, is a similar service as kerkomroep that contains data of broadcasts, both video and audio, broadcasting date and time, and potentially additional data such as the name of the church service leader. The plugin will check for life broadcasts every time a person visits the website page containing Sermons-NL data. Additionally it will update the archive once every 15 minutes. The plugin will only be able to retrieve these data when publicly available (a setting in Kerkomroep managed by the church). To acknowledge the source and for consistency, the plugin will display the logo and url of Kerkdienstgemist if data from this service is shown. This service is provided by Kerkdienstgemist: [Terms of use, in Dutch](https://info.kerkdienstgemist.nl/algemene-voorwaarden), [Privacy policy, in Dutch](https://info.kerkdienstgemist.nl/privacy). Kerkdienstgemist also provides their own embedded code for use on the church's own website, which is available to the administrator managing the church's information on Kerkdienstgemist.
+
+The fourth API, www.googleapis.com (YouTube Data API) contains data of video's. The plugin obtains video's from the channel indicated in the settings page. It will load data from the most recent 10 broadcasted or planned videos once every 15 minutes and will obtain the entire archive (up to the number of weeks indicated in the plugin's configuation page) once every day. When a broadcast is planned and approaching, the plugin will request the status once every minute, if there is a site visitor. To acknowledge the source and for consistency, the plugin display the YouTube logo with url to the YouTube channel if data from this service is shown. This service is provided by Google: [Terms of use](https://developers.google.com/youtube/terms/api-services-terms-of-service), [Privacy policy](https://www.youtube.com/howyoutubeworks/privacy/).
 
 For all services, the plugin will only send the settings entered in the plugin's configuration page to the respective service in order to request the required data.
 
@@ -59,10 +62,6 @@ Note that you can include this broadcasted event on your website, for example in
 = The automatic linkage of items from different services has gone wrong. What should I do? =
 
 This sometimes happens, e.g. if the broadcasting is started much earlier so that linking it to the planned event is not unambiguous, or if multiple broadcasts of the same type are detected, for example if the broadcast service has been interrupted. It is easy to fix afterwards. Go to the Administration submenu and find the event  that has this error. You can unlink the item that was not correctly linked (it will end up under the \"Unlinked items\") or directly link it to another event. If the event has no other linked items, you can now delete it. Go to the unlinked items if you want to link them to another event. Only items with the same date can be linked.
-
-= Why does Sermons-NL not support Kerkdienst Gemist? =
-
-Kerkdienst Gemist is a service similar to Kerkomroep. Currently, only Kerkomroep is included, because the church for which the plugin was first developed uses that service. However, adding support for Kerkdienst Gemist is possible if a church using Kerkdienst Gemist is willing to assist in testing and debugging. In that case, please visit the issue page and add your reaction or send an e-mail to the developer.
 
 = Wordpress is occasionally responding very slow since I am using Sermons-NL. What can I do about it? =
 

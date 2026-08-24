@@ -32,7 +32,7 @@ class sermons_nl_kerkomroep{
     
     public function __set($key, $value){
         if(array_key_exists($key, $this->data)) $this->update(array($key => $value));
-        else wp_trigger_warning("sermons_nl_kerkomroep::__set", "Trying to set non-existing key `$key` in object of class sermons_nl_kerkomroep.", E_USER_WARNING);
+        else wp_die("In sermons_nl_kerkomroep::__set: Trying to set non-existing key `".esc_html($key)."`.", "An error occurred");
     }
     
     public function update($data){
@@ -47,7 +47,7 @@ class sermons_nl_kerkomroep{
                 }
             }else{
                 unset($data[$key]);
-                wp_trigger_error("sermons_nl_kerkomroep::update", "Trying to update non-existing key `$key` in object of sermons_nl_kerkomroep.", E_USER_WARNING);
+                wp_die("In sermons_nl_kerkomroep::update: Trying to update non-existing key `".esc_html($key)."`.", "An error occurred");
             }
         }
         if($update){
@@ -221,7 +221,7 @@ class sermons_nl_kerkomroep{
             return false;
         }
         if(empty($obj->response->uitzendingen) || empty($obj->response->uitzendingen->uitzending)){
-            sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "Archive received from Kerkomroep is empty.");
+            sermons_nl::log("sermons_nl_kerkomroep::get_remote_data", "Archive received from Kerkomroep archive is empty.");
             return false;
         }
         $remote_data = $obj->response->uitzendingen->uitzending;
@@ -303,7 +303,7 @@ class sermons_nl_kerkomroep{
         $found_items = array();
 	    // loop through remote data array
 	    $prev_item = null;
-	    $DI15m = new DateInterval("PT15M");
+	    $DI_delay = new DateInterval("PT".(int)get_option('sermons_nl_kerkomroep_min_delay')."M");
         foreach($remote_data as $remote_item){
             if((int)$remote_item->is_live){
                 // this should not happen, but if other than the first record are live broadcasting, I want to handle it via this function.
@@ -354,7 +354,7 @@ class sermons_nl_kerkomroep{
                 $item = self::add_record($new_data);
                 // check for existing events with matching / overlapping dt
                 // take some margin because the broadcast may have started earlier or be detected later
-                $dt1 = (new DateTime($item->dt, sermons_nl::$timezone_db))->sub($DI15m)->format("Y-m-d H:i:s"); // margin for delayed start
+                $dt1 = (new DateTime($item->dt, sermons_nl::$timezone_db))->sub($DI_delay)->format("Y-m-d H:i:s"); // margin for delayed start
                 $dt2 = (new DateTime($item->dt_end, sermons_nl::$timezone_db))->format("Y-m-d H:i:s"); // from the archive, a margin for early start is not needed
                 $event = sermons_nl_event::get_by_dt($dt1, $dt2);
                 // create a new event if there is no event within this datetime range OR if the event already has a kerkomroep item

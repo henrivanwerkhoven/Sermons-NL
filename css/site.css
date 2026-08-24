@@ -61,6 +61,7 @@
 
 .sermons-nl-audio,
 .sermons-nl-audio-live,
+.sermons-nl-audio-planned,
 .sermons-nl-video,
 .sermons-nl-video-live,
 .sermons-nl-video-planned{
@@ -69,6 +70,7 @@
 
 p.sermons-nl-audio,
 p.sermons-nl-audio-live,
+p.sermons-nl-audio-planned,
 p.sermons-nl-video,
 p.sermons-nl-video-live,
 p.sermons-nl-video-planned{
@@ -77,6 +79,7 @@ p.sermons-nl-video-planned{
 }
 p.sermons-nl-audio a,
 p.sermons-nl-audio-live a,
+p.sermons-nl-audio-planned a,
 p.sermons-nl-video a,
 p.sermons-nl-video-planned a,
 p.sermons-nl-video-live a{
