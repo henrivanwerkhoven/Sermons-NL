@@ -16,7 +16,7 @@ if(!defined('ABSPATH')) exit; // Exit if accessed directly
 class sermons_nl{
 
     const PLUGIN_URL = "https://wordpress.org/plugins/sermons-nl/";
-	const V = '1.4.12'; // version to be used for scripts / style sheets
+	const V = '1.5'; // version to be used for scripts / style sheets
 	const INVALID_SHORTCODE_TEXT = '<div>[Sermons-NL invalid shortcode]</div>';
 
 	const LOG_RETENTION_DAYS = 30; // how many days to keep the log items; this might become a setting later
@@ -1468,7 +1468,8 @@ Note that you can include this broadcasted event on your website, for example in
 						<tr class="collapsible-setting">
 							<td>YouTube channel ID: 
 								<div class="help">
-									<figure><img src="' . esc_url(plugin_dir_url(__FILE__)) . '/img/yt_channel.jpg"/><figcaption>' . esc_html__("Browse to your church's YouTube channel and copy the youtube channel ID from the url.","sermons-nl") . '</figcaption></figure>
+									<figure><img src="' . esc_url(plugin_dir_url(__FILE__)) . '/img/yt_channel_header.png"/><figcaption><strong>' . esc_html__("Step","sermons-nl") . " 1:</strong> " . esc_html__("Browse to your church's YouTube channel and click 'more' in the header.","sermons-nl") . '</figcaption>
+									<img src="' . esc_url(plugin_dir_url(__FILE__)) . '/img/yt_channel_copy_id.png"/><figcaption><strong>' . esc_html__("Step","sermons-nl") . " 2:</strong> " . esc_html__("Scroll down if needed and click 'Share channel' and next 'Copy channel ID'. Paste the channel ID here.","sermons-nl") . '</figcaption></figure>
 								</div>
 							</td>
 							<td><input type="text" name="sermons_nl_youtube_channel" id="input_youtube_id" value="' . esc_attr($yt_channel) . '"/></td>
