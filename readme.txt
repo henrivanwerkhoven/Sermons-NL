@@ -4,7 +4,7 @@ Donate link:
 Tags: kerkdiensten, kerktijden, kerkomroep, kerkdienstgemist, youtube
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 2.0
+Stable tag: 2.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -133,6 +133,9 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 * Resolved wordpress-related warnigs.
 * Improved configuration information for YouTube.
 
+= 2.1 =
+* Database changes in new plugin versions are now applied when upgrading the plugin.
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -164,3 +167,6 @@ Bug fix for Kerkomroep. Fixes several issues identified with check-plugin.
 
 = 2.0 =
 Addition of Kerkdienstgemist and some small improvements.
+
+= 2.1 =
+Fixes database changes between plugin versions.

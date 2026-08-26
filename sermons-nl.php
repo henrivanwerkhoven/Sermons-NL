@@ -3,7 +3,7 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	Description: List planned and broadcasted Dutch church services or other events in a convenient way
-	Version: 2.0
+	Version: 2.1
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
 	License: GPL2
@@ -2555,42 +2555,23 @@ Note that you can include this broadcasted event on your website, for example in
 			wp_die("No permission");
 		}
 
-        // prepare create database tables
+        // prepare create / update database tables
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         $prefix = $wpdb->prefix;
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
         
-        // create table for broadcast events
-        $sql = sermons_nl_event::query_create_table($prefix, $charset_collate);
-        dbDelta($sql);
-        
-        // create tables for kerktijden scheduled church services and pastors
-        $sql = sermons_nl_kerktijden::query_create_table($prefix, $charset_collate);
-        dbDelta($sql);
-        $sql = sermons_nl_kerktijdenpastors::query_create_table($prefix, $charset_collate);
-        dbDelta($sql);
-        
-        // create table for kerkomroep broadcasts
-        $sql = sermons_nl_kerkomroep::query_create_table($prefix, $charset_collate);
-        dbDelta($sql);
-
-		$sql = sermons_nl_kerkdienstgemist::query_create_table($prefix, $charset_collate);
-		dbDelta($sql);
-        
-        // create table for youtube broadcasts
-        $sql = sermons_nl_youtube::query_create_table($prefix, $charset_collate);
-        dbDelta($sql);
-
-		// create table for log
-		$sql = "CREATE TABLE {$prefix}sermons_nl_log (
-			id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-			dt datetime NULL,
-			fun varchar(255) DEFAULT '' NOT NULL,
-			log varchar(255) DEFAULT '' NOT NULL,
-			PRIMARY KEY  (id)
-			) $charset_collate;";
-		dbDelta($sql);
+		// go through all sql files to create / update all tables
+		$sql_files = list_files(plugin_dir_path(__FILE__) . 'sql', 1);
+		if($sql_files !== false){
+			foreach($sql_files as $filepath){
+				if(is_file($filepath) && substr(basename($filepath), 0, 6) == 'table_' && substr($filepath, -4) == '.sql'){
+					$sql_raw = file_get_contents($filepath);
+					$sql = trim(str_replace(array("{prefix}", "{charset_collate}"), array($prefix, $charset_collate), $sql_raw));
+					dbDelta($sql);
+				}
+			}
+		}
 
         // set plugin options to the default if they don't exist
         foreach(self::OPTION_NAMES as $opt_name => $args){
@@ -2606,6 +2587,18 @@ Note that you can include this broadcasted event on your website, for example in
     		wp_schedule_event(strtotime('tomorrow 03:00:00'), 'daily', 'sermons_nl_cron_daily');
 
     }
+
+    public static function upgrade_plugin($upgrader_object, $options){
+		$current_plugin = plugin_basename(__FILE__);
+		if($options['action'] == 'update' && $options['type'] == 'plugin'){
+			foreach($options['plugins'] as $each_plugin){
+				if($each_plugin==$current_plugin){
+					// same code can be run as when plugin is activated
+					self::activate_plugin();
+				}
+			}
+		}
+	}
     
     public static function add_cron_interval(array $schedules){
 		$schedules['fifteen_minutes'] = array(
@@ -2684,6 +2677,7 @@ require_once(plugin_dir_path(__FILE__) . 'youtube.php');
 
 // ACTIVATION, DEACTIVATION AND UNINSTALL HOOKS
 register_activation_hook(__FILE__, array('sermons_nl', 'activate_plugin'));
+add_action('upgrader_process_complete', array('sermons_nl', 'upgrade_plugin'), 10, 2);
 register_deactivation_hook(__FILE__, array('sermons_nl', 'deactivate_plugin'));
 register_uninstall_hook(__FILE__, array('sermons_nl', 'uninstall_plugin'));
 
