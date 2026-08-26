@@ -153,20 +153,6 @@ class sermons_nl_kerktijden{
 		$wpdb->query($wpdb->prepare($q,$values));
 	}
 	
-	public static function query_create_table($prefix, $charset_collate){
-	    global $wpdb;
-	    return "CREATE TABLE {$wpdb->prefix}sermons_nl_kerktijden (
-        id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-        event_id int(10) UNSIGNED NULL,
-        dt datetime DEFAULT '1970-01-01 01:00:00' NOT NULL,
-        sermontype varchar(255) DEFAULT '' NOT NULL,
-        pastor_id int(10) UNSIGNED NULL,
-        cancelled tinyint(1) UNSIGNED DEFAULT 0 NOT NULL,
-        PRIMARY KEY  (id),
-        UNIQUE KEY dt (dt)
-        ) $charset_collate;";
-	}
-
     // METHODS TO LOAD NEW DATA FROM kerktijden.nl
     
 	public static function get_remote_data_forward(){
@@ -341,16 +327,6 @@ class sermons_nl_kerktijdenpastors{
 	        return self::get_by_id($data['id']);
 	    }
 	    return null;
-	}
-	
-	public static function query_create_table($prefix, $charset_collate){
-	    global $wpdb;
-	    return "CREATE TABLE {$wpdb->prefix}sermons_nl_kerktijdenpastors (
-        id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-        pastor varchar(255) default '' NOT NULL,
-        town varchar(255) default '' NOT NULL,
-        PRIMARY KEY  (id)
-        ) $charset_collate;";
 	}
 	
 	// METHOD TO VERIFY ALL PASTOR DATA (to be run regularly, i.e. with the daily update)
