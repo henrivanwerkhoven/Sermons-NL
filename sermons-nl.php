@@ -3,7 +3,7 @@
 	Plugin Name: Sermons-NL
 	Plugin URI: https://wordpress.org/plugins/sermons-nl/
 	Description: List planned and broadcasted Dutch church services or other events in a convenient way
-	Version: 2.1
+	Version: 2.2
 	Author: Henri van Werkhoven
 	Author URI: https://profiles.wordpress.org/henrivanwerkhoven/
 	License: GPL2
@@ -115,7 +115,7 @@ class sermons_nl{
 	    global $wpdb;
 	    $sql = "SELECT 
 	        e.id, 
-	        e.include, 
+	        e.include,
 	        e.protected,
 	        (case when dt_from='manual' AND e.dt_manual IS NOT NULL then e.dt_manual
                   when dt_from='kerktijden' AND kt.dt IS NOT NULL then kt.dt
@@ -1675,7 +1675,7 @@ Note that you can include this broadcasted event on your website, for example in
 	
     // UPDATE FUNCTIONS HANDLED BY CRON JOBS
     
-    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old events if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
+    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors from kerktijden (name, town) (3) delete old events if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
     public static function update_daily(){
         // kerktijden: update the archive
         if(get_option('sermons_nl_kerktijden_id')){

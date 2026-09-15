@@ -11,7 +11,14 @@ class sermons_nl_event{
     private $items = array();
     
     public function __construct(stdClass $object){
-        $this->data = get_object_vars($object);
+        $event_data = get_object_vars($object);
+        // if they exist, we shouldn't be saving these values
+        unset($event_data['kt_ids']);
+        unset($event_data['ko_ids']);
+        unset($event_data['kg_ids']);
+        unset($event_data['yt_ids']);
+        # save the remaining data
+        $this->data = $event_data;
     }
     
     public function __get(string $key){
@@ -37,7 +44,6 @@ class sermons_nl_event{
                     'kerkdienstgemist' => $this->kerkdienstgemist,
                     'youtube' => $this->youtube
                 );
-            case 'has_any_items': return !empty(array_filter($this->items, function ($a){ return $a !== null;}));
             case 'dt': 
             case 'dt_start':
                 switch($this->data['dt_from']){
@@ -142,15 +148,6 @@ class sermons_nl_event{
         unset(self::$events[$this->id]);
     }
 
-    public function delete_if_redundant(){
-        if($this->protected || $this->has_any_items){
-            return false;
-        }
-        $event_id = $this->id;
-        $this->delete();
-        return $event_id;
-    }
-    
     public function get_all_items(){
         $ret = array();
         $kt = sermons_nl_kerktijden::get_all_by_event_id($this->id);
@@ -163,6 +160,8 @@ class sermons_nl_event{
         if(!empty($yt)) $ret['youtube'] = $yt;
         return $ret;
     }
+
+    // static functions to get one or a set of events
 
 	public static function get_all(){
 	    if(self::$events === null){
@@ -206,6 +205,81 @@ class sermons_nl_event{
 	    }
 	    return self::get_by_id($data[0]['id']);
 	} 
+
+	// added in version 2.2:
+	// get (non-empty and/or included) records between a start and end datetime or with a count from either a start or end datetime
+	// not yet used but in preparation of structural change of how the events are selected and listed if they have multiple items of the same type
+	public static function get_by_dt_num(?string $dt1=null, ?string $dt2=null, ?int $num=null, bool $limit_nonempty=false, bool $limit_included=false){
+        global $wpdb;
+        // check which services are enabled
+        $kt_enab = !empty(get_option('sermons_nl_kerktijden_id'));
+        $ko_enab = !empty(get_option('sermons_nl_kerkomroep_mountpoint'));
+        $kg_enab = !empty(get_option('sermons_nl_kerkdienstgemist_id'));
+        $yt_enab = !empty(get_option('sermons_nl_youtube_channel'));
+
+        // build query
+        $q = "SELECT
+          e.*,
+          (case when dt_from='manual' AND e.dt_manual IS NOT NULL then e.dt_manual
+            when dt_from='kerktijden' AND kt.dt IS NOT NULL then kt.dt
+            when dt_from='kerkomroep' AND ko.dt IS NOT NULL then ko.dt
+            when dt_from='kerkdienstgemist' AND kg.dt IS NOT NULL then kg.dt
+            when dt_from='youtube' AND yt.dt_planned IS NOT NULL then yt.dt_planned
+            when dt_from='youtube' AND yt.dt_actual IS NOT NULL then yt.dt_actual
+            when kt.dt IS NOT NULL then kt.dt
+            when yt.dt_planned IS NOT NULL then yt.dt_planned
+            when ko.dt IS NOT NULL then ko.dt
+            when kg.dt IS NOT NULL then kg.dt
+            when yt.dt_actual IS NOT NULL then yt.dt_actual
+            else e.dt_min
+              end) as dt_start,
+          kt.kt_ids, ko.ko_ids, kg.kg_ids, yt.yt_ids
+          FROM {$wpdb->prefix}sermons_nl_events AS e
+          LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as kt_ids FROM {$wpdb->prefix}sermons_nl_kerktijden GROUP BY event_id) AS kt ON e.id = kt.event_id
+          LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as ko_ids FROM {$wpdb->prefix}sermons_nl_kerkomroep GROUP BY event_id) AS ko ON e.id = ko.event_id
+          LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as kg_ids FROM {$wpdb->prefix}sermons_nl_kerkdienstgemist GROUP BY event_id) AS kg ON e.id = kg.event_id
+          LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as yt_ids FROM {$wpdb->prefix}sermons_nl_youtube GROUP BY event_id) AS yt ON e.id = yt.event_id";
+
+        // add conditions
+        $q .= "
+          WHERE";
+        $and = false;
+        if($limit_nonempty){
+            $q .= "
+            (
+              dt_from='manual' OR pastor_from='manual' OR sermonstype_from='manual' OR description_from='manual' OR
+              kt_ids IS NOT NULL OR
+              ko_ids IS NOT NULL OR
+              kg_ids IS NOT NULL OR
+              yt_ids IS NOT NULL
+            )";
+            $and = true;
+        }
+        if($limit_included){
+            if($and) $q .= " AND";
+            $q .= " included = 1";
+            $and = true;
+        }
+        if($and) $q .= " AND";
+        if($dt1 !== null && $num !== null && $dt2 === null){
+            $q .= " dt_start >= '$dt1' LIMIT $num";
+        }elseif($dt1 !== null && $dt2 !== null && $num === null){
+            $q .= " dt_start >= $dt1 AND dt_start <= $dt2";
+        }elseif($dt2 !== null && $num !== null && $dt1 === null){
+            $q .= " dt_start <= $dt2 LIMIT $num OFFSET -$num";
+        }else{
+            wp_die("In ".__CLASS__."::get_by_dt_num: one and only one of the first three arguments must be null.", "An error occurred");
+        }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $data = $wpdb->get_results($q, OBJECT_K);
+        $retval = array();
+        $kt_ids = $ko_ids = $kg_ids = $yt_ids = array();
+        foreach($data as $key => $object){
+            if(!isset(self::$events[$key])) self::$events[$key] = new self($object);
+            $retval[$key] = self::$events[$key];
+        }
+        return $retval;
+    }
 	
 	public static function add_record(string $dt, ?string $dt2=null){
 	    global $wpdb;

@@ -4,7 +4,7 @@ Donate link:
 Tags: kerkdiensten, kerktijden, kerkomroep, kerkdienstgemist, youtube
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 2.1
+Stable tag: 2.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -136,6 +136,9 @@ Please visit the Log submenu in your WP Admin first to see if you can identify t
 = 2.1 =
 * Database changes in new plugin versions are now applied when upgrading the plugin.
 
+= 2.2 =
+* The function to automatically delete events when they become empty is removed as it resulted in inadvertent deletion.
+
 == Upgrade Notice ==
 
 = 0.1 =
@@ -170,3 +173,6 @@ Addition of Kerkdienstgemist and some small improvements.
 
 = 2.1 =
 Fixes database changes between plugin versions.
+
+= 2.2 =
+Fixes inadvertent deletion of events.

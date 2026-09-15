@@ -125,15 +125,8 @@ class sermons_nl_kerkomroep{
         if(count($data) > 1){
             for($i=1; $i<count($data); $i++){
                 $item = self::get_by_id($data[$i]['id']);
-                $event = $item->event;
                 self::log('sermons_nl_kerkomroep::get_live()', "Deleting duplicate live broadcasting entry (#{$item->id})");
                 $item->delete();
-                if($event){
-                    $deleted_event_id = $event->delete_if_redundant();
-                    if($deleted_event_id !== false){
-                        self::log('sermons_nl_kerkomroep::get_live()', "Also deleted event because it has no more items (#{$deleted_event_id})");
-                    }
-                }
             }
         }
         // return the live event
@@ -264,15 +257,8 @@ class sermons_nl_kerkomroep{
             }
         }elseif($local_item !== null){
             // live broadcast is no longer available remotely but still exists locally. Delete it. The broadcast will later be added from the archive.
-            $event = $local_item->event;
             sermons_nl::log("sermons_nl_kerkomroep::compare_live_broadcast","No longer broadcasting; item deleted (#{$local_item->id}).");
             $local_item->delete();
-            if($event){
-                $deleted_event_id = $event->delete_if_redundant();
-                if($deleted_event_id !== false){
-                    self::log("sermons_nl_kerkomroep::compare_live_broadcast", "Also deleted event because it has no more items (#{$deleted_event_id})");
-                }
-            }
         }
     }
     
