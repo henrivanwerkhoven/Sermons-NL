@@ -115,7 +115,7 @@ class sermons_nl{
 	    global $wpdb;
 	    $sql = "SELECT 
 	        e.id, 
-	        e.include, 
+	        e.include,
 	        e.protected,
 	        (case when dt_from='manual' AND e.dt_manual IS NOT NULL then e.dt_manual
                   when dt_from='kerktijden' AND kt.dt IS NOT NULL then kt.dt
@@ -584,7 +584,7 @@ class sermons_nl{
 
 			esc_html__("We have broadcasted an event that I don't want to include in the list of (planned) broadcasts. How do I do that?","sermons-nl") =>
 			esc_html__("You can do so by finding the event in the Administration submenu, and unticking the \"Include in (planned) broadcasts list\" option. Don't forget to press the Save button.
-If you want to prevent a future broadcasted event to be included in the (planned) broadcasts list, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the appropriate date and time of the planned event. Untick the \"Include in (planned) broadcasts list\" option. Note that the \"Protect from automated deletion\" option should be ticked if you create the manual event entry before the day of the broadcasted event, otherwise it will be deleted overnight. As soon as the new broadcast is detected, the plugin will link it to this manual event, which will avoid inclusion in the (planned) broadcasts list.
+If you want to prevent a future broadcasted event to be included in the (planned) broadcasts list, you can create a new event manually (\"Create new event\" option in the Administration submenu) and enter the appropriate date and time of the planned event. Untick the \"Include in (planned) broadcasts list\" option. As soon as the new broadcast is detected, the plugin will link it to this manual event, which will avoid inclusion in the (planned) broadcasts list.
 Note that you can include this broadcasted event on your website, for example in a news message, by using the shortcode for events that you find in the Administration page.","sermons-nl"),
 
 			esc_html__("The automatic linkage of items from different services has gone wrong. What should I do?","sermons-nl") =>
@@ -1063,7 +1063,8 @@ Note that you can include this broadcasted event on your website, for example in
 				esc_html__('If this option is checked, the event will be included when displaying the (planned) broadcasts list on the website using the sermons-nl-list shortcode.','sermons-nl') .
 				'<br/>
 				<sup>6.</sup> ' .
-				esc_html__('Events that have no linked items are deleted over night. Tick this box to prevent that from happening.','sermons-nl') . '
+				esc_html__('Events that have no linked items are deleted over night. Tick this box to prevent that from happening.','sermons-nl') .
+				'
 			</p>
 		</form>';
 		return $html;
@@ -1675,7 +1676,7 @@ Note that you can include this broadcasted event on your website, for example in
 	
     // UPDATE FUNCTIONS HANDLED BY CRON JOBS
     
-    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors (name, town) (3) delete old events if there is no broadcast; which should be done daily to avoid exceeding the limit (of youtube) and spare resources
+    // handles (1) verifying data of all youtube broadcasts (2) get/update additional data about pastors from kerktijden (name, town); which should be done daily to avoid exceeding the limit (of youtube) and spare resources
     public static function update_daily(){
         // kerktijden: update the archive
         if(get_option('sermons_nl_kerktijden_id')){

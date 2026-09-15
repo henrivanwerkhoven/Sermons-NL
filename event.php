@@ -37,7 +37,6 @@ class sermons_nl_event{
                     'kerkdienstgemist' => $this->kerkdienstgemist,
                     'youtube' => $this->youtube
                 );
-            case 'has_any_items': return !empty(array_filter($this->items, function ($a){ return $a !== null;}));
             case 'dt': 
             case 'dt_start':
                 switch($this->data['dt_from']){
@@ -142,15 +141,6 @@ class sermons_nl_event{
         unset(self::$events[$this->id]);
     }
 
-    public function delete_if_redundant(){
-        if($this->protected || $this->has_any_items){
-            return false;
-        }
-        $event_id = $this->id;
-        $this->delete();
-        return $event_id;
-    }
-    
     public function get_all_items(){
         $ret = array();
         $kt = sermons_nl_kerktijden::get_all_by_event_id($this->id);
@@ -163,6 +153,8 @@ class sermons_nl_event{
         if(!empty($yt)) $ret['youtube'] = $yt;
         return $ret;
     }
+
+    // static functions to get one or a set of events
 
 	public static function get_all(){
 	    if(self::$events === null){
@@ -206,6 +198,53 @@ class sermons_nl_event{
 	    }
 	    return self::get_by_id($data[0]['id']);
 	} 
+
+	// added in version 2.2: get (non-empty) records between a start and end date or with a count from either a start of end date
+	public static function get_by_dt_num(?string $dt1=null, ?string $dt2=null, ?int $num=null, bool $limit_nonempty=false, bool $limit_included=false){
+        global $wpdb;
+        // check which services are enabled
+        $kt_enab = !empty(get_option('sermons_nl_kerktijden_id'));
+        $ko_enab = !empty(get_option('sermons_nl_kerkomroep_mountpoint'));
+        $kg_enab = !empty(get_option('sermons_nl_kerkdienstgemist_id'));
+        $yt_enab = !empty(get_option('sermons_nl_youtube_channel'));
+
+        // build query
+        $q = "SELECT e.*";
+        if($kt_enab) $q .= ", kt.kt_ids";
+        if($ko_enab) $q .= ", ko.ko_ids";
+        if($kg_enab) $q .= ", kg.kg_ids";
+        if($yt_enab) $q .= ", yt.yt_ids";
+        $q .= " FROM {$wpdb->prefix}sermons_nl_events AS e";
+        if($kt_enab) $q .= " LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as kt_ids FROM {$wpdb->prefix}sermons_nl_kerktijden GROUP BY event_id) AS kt ON e.id = kt.event_id";
+        if($ko_enab) $q .= " LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as ko_ids FROM {$wpdb->prefix}sermons_nl_kerkomroep GROUP BY event_id) AS ko ON e.id = ko.event_id";
+        if($kg_enab) $q .= " LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as kg_ids FROM {$wpdb->prefix}sermons_nl_kerkdienstgemist GROUP BY event_id) AS kg ON e.id = kg.event_id";
+        if($yt_enab) $q .= " LEFT JOIN (SELECT event_id,GROUP_CONCAT(id) as yt_ids FROM {$wpdb->prefix}sermons_nl_youtube GROUP BY event_id) AS yt ON e.id = yt.event_id";
+
+        // add conditions
+        $q .= " WHERE"
+        if($limit_nonempty){
+            $q .= " (dt_from='manual' OR pastor_from='manual' OR sermonstype_from='manual' OR description_from='manual'";
+            if($kt_enab) $q .= " OR kt_ids IS NOT NULL";
+            if($ko_enab) $q .= " OR ko_ids IS NOT NULL";
+            if($kg_enab) $q .= " OR kg_ids IS NOT NULL";
+            if($yt_enab) $q .= " OR yt_ids IS NOT NULL";
+            $q .= ")";
+        }
+        if($limit_included){
+            if($limit_nonempty) $q .= " AND";
+
+        }
+        if($dt1 !== null && $num !== null && $dt2 === null){
+
+        }elseif($dt1 !== null && $dt2 !== null && $num === null){
+
+        }elseif($dt2 !== null && $num !== null && $dt1 === null){
+
+        }else{
+            wp_die("In ".__CLASS__."::get_by_dt_num: one and only one of the first three arguments must be null.", "An error occurred");
+        }
+
+    }
 	
 	public static function add_record(string $dt, ?string $dt2=null){
 	    global $wpdb;
